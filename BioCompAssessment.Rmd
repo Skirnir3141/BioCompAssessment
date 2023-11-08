@@ -1,0 +1,266 @@
+---
+title: "Michael Jordan BioComp Assignment"
+author: "Michael Jordan"
+date: "2023-12-01"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+The malleefowl (Leipoa ocellata) is a large (~2kg) ground-dwelling bird endemic
+to Australia.  It is a member of the Megapodiidae family, which are notable for 
+incubating their eggs in mounds that provide an external source of heat rather
+than in nests heated with their own body.  The malleefowl is distinct from other
+members of the family in that it builds particularly elaborate mounds and
+inhabits arid habitats rather than damp forests.
+
+Malleefowl mounds are large (2 ft x 3 ft), scraped out of the ground by the
+male, filled with leaf litter, and covered with an insulating layer of sand.
+Solar radiation and fermentation of the organic material maintains a constant
+temperature of 33°C within the nest, which is necessary for egg development.
+Because sand and organic matter are required for nest construction, malleefowl
+tend to habitate in arid to semi-arid shrublands and low woodlands (the bird is
+named after the mallee tree, which is common in such habitats).  Within the
+context of these habitats, malleefowl population concentration tends to be
+highest in areas with higher rainfall and more fertile soil.
+
+Although records suggests that the malleefowl was common prior to European
+colonization, its population has declined due to predation by introduced
+predators (e.g., red fox) and habitat loss and fragmentation due to human
+development, grazing by livestock, and wildfires.  Today, the malleefowl is
+listed as vulnerable on the IUCN Red List and under the Australian Environment
+Protection and Biodiversity Conservation Act of 1999.
+
+In 2007, the Australian government instituted a $2.4M AUD National Recovery Plan
+for the malleefowl.  Although the report had insufficient evidence to accurately
+assess malleefowl conservation status across Australia, it cited detailed
+monitoring of malleefowl populations in Victoria and NSW that showed steep
+decline in the decade leading up to the NRP.  Additionally, the fact that many
+populations were small and isolated as well as the reality that dynamics driving
+malleefowl population decreases were unlikely to abate lead the government to
+take action.
+
+The NRP stated several objectives, including reducing habitat loss, grazing
+pressure by livestock, fire threat, and predation.  However, these initiatives
+are unlikely to be successful if climate change renders current malleefowl
+habitats unviable.  Patterns of rainfall and temperature in particular may be
+significant, since they could impact breeding success.
+
+This report aims to estimate the likely impact of climate change on malleefowl
+species distribution in order to inform the malleefowl NRP.  If we expect
+malleefowl habitat to expand or contract, some objectives may need to be
+curtailed or added to the plan (e.g., it would make little sense to reduce
+predation in an area that will soon become unviable for malleefowl).
+
+
+## Methodology
+
+All analysis was completed using R version 4.3.1.  Malleefowl occurrence data
+was downloaded from the Global Biodiversity Information Facility (GBIF) database
+using the Dismo R package.
+
+```{r import}
+# Import data from GBIF and retain only relevant columns.
+m_tot <- dismo::gbif("Leipoa", "ocellata") # n = 10490
+keep <- c("adm1", "adm2", "basisOfRecord", "cloc", "collectionCode",
+          "coordinateUncertaintyInMeters", "day", "eventDate", "eventTime",
+          "gbifID", "geodeticDatum", "georeferenceVerificationStatus",
+          "higherGeography", "identifiedBy", "informationWithheld",
+          "institutionCode", "lat", "locality", "lon", "month", "occurrenceID",
+          "occurrenceRemarks", "protocol", "recordedBy", "year")
+m <- m_tot[ , names(m_tot) %in% keep]
+```
+
+Data was cleaned to include only trustworthy, precise, non-duplicative
+observations during the years covered by our historical climate data (1970 -
+2000) and plotted to verify a lack of outliers.
+
+```{r clean}
+# Clean data: 1) filter for observation occurrences, 2) remove occurrences
+# without geo coords, 3) remove uncertain occurrences (unverified, obfuscated
+# geo coords, > 1km geo coord uncertainty), 3) filter for records in baseline
+# historical years.  Additionally, data were checked for incorrect lat/lon
+#zeroing, but none was found.
+m <- m[
+  m$basisOfRecord %in% c("HUMAN_OBSERVATION", "MACHINE_OBSERVATION")
+  & !is.na(m$lon)
+  & !is.na(m$lat)
+  & (
+    is.na(m$georeferenceVerificationStatus)
+    | m$georeferenceVerificationStatus == "verified")
+  & is.na(m$informationWithheld)
+  & (
+    is.na(m$coordinateUncertaintyInMeters)
+    | m$coordinateUncertaintyInMeters <= 1000)
+  & !is.na(m$year)
+  & m$year >= 1970
+  & m$year <= 2000, ] # n = 774
+
+# Drop observations that are duplicative at the day/lat/lon level.  Visual spot
+# check confirmed identical metadata for duplicate events at this level.
+m$dup <- duplicated(m[, c("eventDate", "lon", "lat")])
+m <- m[m$dup == FALSE, ] # n = 731
+
+# Declare geo coords extent and plot observations.
+ext <- terra::ext(110, 155, -45, -8)
+m_sf <- st_as_sf(m, coords = c("lon", "lat"), crs = 4326)
+au <- ne_countries(country="australia", scale = "large", returnclass = "sf")
+plot(st_geometry(au), xlim = ext[1:2], ylim = ext[3:4], 
+     bg="lightblue", col = "ivory", axes=TRUE)
+plot(st_geometry(m_sf), add=TRUE, col="black", border=NA)
+```
+
+To estimate current species distribution, historical climate data (1970 - 2000)
+was pulled from WorldClim 2.1 using the geodata package.  Future climate data
+was pulled for two time periods -- 2021 - 2040, 2041 - 2060 -- using the Hadley
+GEM3 model and Shared Socioeconomic Pathway 2-4.5.  The two time periods were
+chosen so that we could understand over what time scale we might see malleefowl
+habitat shift.  SSP 245 was picked because it represents a "middle ground"
+scenario and so should provide a conservative estimate of the extent of
+malleefowl habitat shift.
+
+Because malleefowl are likely to have elevation and soil habitat preferences,
+the geodata package was used to pull elevation data from the Shuttle Radar
+Topography Mission and % sand composition and carbon density (as a proxy for
+soil richness) data from the SoilGRIDS database.
+
+Climate and elevation data were pulled at a 2.5 arc-minute resolution (~1.3km at
+Australian latitude).  Soil data were pulled at a 30 arc-second resolution and
+aggregated to a 2.5 acr-minute resolution
+
+```{r gather}
+# Pull historical and future climate data as well as elevation and soil data.
+# Crop to Australia geo extent.
+bioclim_h <- geodata::worldclim_global(var = "bio", res = 2.5, path = "data")
+bioclim_h <- terra::crop(bioclim_h, ext)
+bioclim_f1 <- geodata::cmip6_world(
+  model = "HadGEM3-GC31-LL",
+  ssp = "585",
+  time = "2021-2040",
+  var = "bioc",
+  path = "data",
+  res = 2.5)
+bioclim_f1 <- terra::crop(bioclim_f1, ext)
+bioclim_f2 <- geodata::cmip6_world(
+  model = "HadGEM3-GC31-LL",
+  ssp = "585",
+  time = "2041-2060",
+  var = "bioc",
+  path = "data",
+  res = 2.5)
+bioclim_f2 <- terra::crop(bioclim_f2, ext)
+elev <- geodata::elevation_global(res = 2.5, path = "data")
+elev <- terra::crop(elev, ext)
+sand <- geodata::soil_world(
+  var = "sand", stat = "mean", depth = 60, path = "data")
+sand <- terra::crop(sand, ext)
+carbon <- geodata::soil_world(
+  var = "ocd", stat = "mean", depth = 60, path = "data")
+carbon <- terra::crop(carbon, ext)
+
+# Aggregate soil rasters to 2.5 arc minute resolution.
+sand <- terra::aggregate(sand, fact = 5, fun = mean)
+carbon <- terra::aggregate(carbon, fact = 5, fun = mean)
+
+# Align and clarify column names.
+bioclim_names <- paste0('bio', 1:19)
+names(bioclim_h) <- bioclim_names
+names(bioclim_f1) <- bioclim_names
+names(bioclim_f2) <- bioclim_names
+names(elev) <- c("elev")
+```
+
+Data were projected onto the Geoscience Australia Lambert
+projection (EPSG: 3112) and combined.
+
+```{r project}
+# Create a grid and project objects into the Geoscience Australia Lambert
+#projection.
+ntm_grid <- terra::rast(
+  ext(-2740000, 2400000, -5252000, -944000), 
+  res = 20000, crs = "EPSG:3112")
+m_sf <- sf::st_transform(m_sf, crs = "EPSG:3112")
+bioclim_h <- terra::project(bioclim_h, ntm_grid)
+bioclim_f1 <- terra::project(bioclim_f1, ntm_grid)
+bioclim_f2 <- terra::project(bioclim_f2, ntm_grid)
+elev <- terra::project(elev, ntm_grid)
+sand <- terra::project(sand, ntm_grid)
+carbon <- terra::project(carbon, ntm_grid)
+
+# Add elevation, sand, and carbon data to historical and future rasters.
+bioclim_h <- c(bioclim_h, elev)
+bioclim_h <- c(bioclim_h, sand)
+bioclim_h <- c(bioclim_h, carbon)
+bioclim_f1 <- c(bioclim_f1, elev)
+bioclim_f1 <- c(bioclim_f1, sand)
+bioclim_f1 <- c(bioclim_f1, carbon)
+bioclim_f2 <- c(bioclim_f2, elev)
+bioclim_f2 <- c(bioclim_f2, sand)
+bioclim_f2 <- c(bioclim_f2, carbon)
+```
+
+A number of background psuedo-absence points equal to the observation count
+(n = 731) were set using the Dismo package and plotted to visually inspect.
+
+```{r absence}
+# Create random psuedo absence geo coords.
+n_pseudo <- nrow(m_sf)
+land <- bioclim_h[["elev"]] > 0
+pseudo_dismo <- dismo::randomPoints(
+  mask = as(land, 'Raster'),
+  n = n_pseudo, 
+  p = st_coordinates(m_sf))
+pseudo_dismo <- sf::st_as_sf(
+  data.frame(pseudo_dismo), coords=c("x", "y"), crs = 3112)
+
+# Plot present and psuedo-absent points to visually inspect for errors.
+# TODO: Add mask for non-AU
+terra::plot(land, col = "grey", legend = FALSE)
+terra::plot(st_geometry(m_sf), add = TRUE, col = "blue", cex = 1, pch = 8)
+terra::plot(pseudo_dismo, add=TRUE, col = "black", cex = .1, pch = 19)
+```
+
+To reserve 20% of data for model evaluation, the Dismo package was used to add
+quintiles and reserve one quintile for training.  Data were combined into a
+single binomial presence/absence raster for data fitting.
+
+```{r combine}
+# Subdivide presence/absence for training/testing.
+m_sf$kfold <- dismo::kfold(m_sf, k=5)
+pseudo_dismo$kfold <- dismo::kfold(pseudo_dismo, k=5)
+
+# Create presence/absence binomial dataset and add environmental data.
+present <- terra::subset(m_sf, select='kfold')
+present$pa <- 1
+absent <- pseudo_dismo
+absent$pa <- 0
+names(absent) <- c('geometry','kfold','pa')
+sf::st_geometry(absent) <- 'geometry'
+pa_data <- rbind(present, absent)
+envt_data <- terra::extract(bioclim_h, pa_data)
+pa_data <- cbind(pa_data, envt_data)
+```
+
+The WorldClim data provides 19 climate measurements, many of which are
+conceptually similar (e.g., Precipitation of Wettest Quarter vs Precipitation of
+Wettest Month).  We selected the following variables for modelling as being
+conceptually justified by the malleefowl's lifecycle:  Annual Mean Temperature,
+Isothermality, Max Temperature of Warmest Month, Min Temperature of Coldest
+Month, Annual Precipitation, Precipitation of Wettest Month, Precipitation of
+Driest Month (Bio1, Bio3, Bio5, Bio6, Bio12, Bio13, Bio14).  Including
+elevation, sand composition of soil, and carbon density of soil, we considered
+10 potential coefficients to model.
+
+```{r aic}
+# Select relevant columns from historical and future rasters
+bioclim_h <- subset(bioclim_h, c("bio1", "bio3", "bio5", "bio6", "bio12",
+  "bio13", "bio14", "elev", "sand_30-60cm", "ocd_30-60cm"))
+bioclim_f1 <- subset(bioclim_f1, c("bio1", "bio3", "bio5", "bio6", "bio12",
+  "bio13", "bio14", "elev", "sand_30-60cm", "ocd_30-60cm"))
+bioclim_f2 <- subset(bioclim_f2, c("bio1", "bio3", "bio5", "bio6", "bio12",
+  "bio13", "bio14", "elev", "sand_30-60cm", "ocd_30-60cm"))
+```
