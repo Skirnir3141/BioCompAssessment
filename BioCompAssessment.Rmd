@@ -11,22 +11,22 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Introduction & Rationale
 
-The malleefowl (Leipoa ocellata) is a large (~2kg) ground-dwelling bird endemic to Australia. It is a member of the Megapodiidae family, which incubate their eggs in mounds that provide an external source of heat rather than in nests using body heat.  Within the Megapodiidae, the malleefowl is the only species to inhabit arid to semi-arid shrublands and low woodlands rather than damp forests.
+The malleefowl (Leipoa ocellata) is a large (~2kg) ground-dwelling bird endemic to Australia. It is a member of the Megapodiidae family, which incubate their eggs in mounds that provide an external source of heat rather than in nests using body heat (Parsons, Short, and Roberts, 2008).  Within the Megapodiidae, the malleefowl is the only species to inhabit arid to semi-arid shrublands and low woodlands rather than damp forests (Benshemesh, 2007).
 
-To facilitate incubation in these environments, malleefowl developed particularly complex mounds. Malleefowl mounds are large (~ 2 ft x 3 ft), scraped out of the ground, filled with leaf litter, and covered with sand, which acts as insulation. Solar radiation and fermentation of organic matter maintain a constant temperature of 33°C within mounds, which is necessary for egg development.  Aside from sand and leaf litter, malleefowl habitat requirements are not otherwise well understood.  However, population concentration is observed to be highest in areas with higher rainfall and more fertile soil, likely due to increased food supply (Copley & Williams 1995).
+To facilitate incubation in these environments, malleefowl developed particularly complex mounds. Malleefowl mounds are large (~3-5m in diameter x 1m deep), scraped out of the ground, filled with leaf litter, and covered with sand, which acts as insulation (Benshemesh, 2007). Solar radiation and fermentation of organic matter maintain a temperature within ~3-5°C of 34°C, which is necessary for egg development (Booth, 1986).  Aside from sand and leaf litter, malleefowl habitat requirements are not otherwise well understood.  However, population concentration is observed to be highest in areas with higher rainfall and more fertile soil, likely due to increased food supply (Benshemesh, 2007).
 
-Although the malleefowl was widely distributed across Australia prior to European colonization (Hill 1989), its population declined significantly post colonization, primarily from habitat loss due to wheat and sheep production. Today, the malleefowl is listed as vulnerable on the IUCN Red List and under the Australian Environment Protection and Biodiversity Conservation Act of 1999.
+Although the malleefowl was widely distributed across Australia prior to European colonization, its population declined significantly post colonization due to habitat loss and predation by introduced predators (Parsons, Short, and Roberts, 2008). Today, the malleefowl is listed as vulnerable on the IUCN Red List and under the Australian Environment Protection and Biodiversity Conservation Act of 1999.
 
-In 2007, the Australian government instituted a five year $2.4M AUD National Recovery Plan for the malleefowl (Benshemesh, 2007). Although the report lacked sufficient evidence to assess malleefowl conservation status across Australia, it cited steep declines in monitored populations to justify action (Priddel & Wheeler 2003). The NRP set several objectives, including reducing habitat loss and reducing grazing pressure by livestock.
+In 2007, the Australian government instituted a five year $2.4M AUD malleefowl National Recovery Plan (Benshemesh, 2007). Although the report lacked sufficient evidence to assess malleefowl conservation status across Australia, it cited steep declines in monitored populations to justify action. The NRP set several objectives, including reducing habitat loss and reducing grazing pressure by livestock.
 
-However, these initiatives are unlikely to be successful if climate change renders current malleefowl habitat nonviable. Changes to rainfall and temperature may be particularly significant, since they could impact breeding success (e.g., if mound temperature falls below 33°C or the environment stops producing sufficient leaf litter for mound construction).
+However, these initiatives are unlikely to succeed if climate change renders current malleefowl habitat nonviable. Prior research has indicated that reduction in rainfall and increase in temperature may be particularly significant, since they impact breeding activity (Stenhouse & Moseby, 2022).
 
-This report aims to use a presence/absence logistic GLM to estimate the likely impact of climate change on malleefowl species distribution in order to inform malleefowl recovery.  If malleefowl habitat is expected to expand or contract, NRP objectives may need to be adjusted.  Additionally, it conducts statistical analysis on the Megapodiidae family to determine if hand-wing index relates to species extinction risk.
+This report aims to use a presence/absence logistic GLM to estimate the likely impact of climate change on malleefowl species distribution in order to inform malleefowl recovery.  If malleefowl habitat is expected to expand or contract, NRP objectives may need to be adjusted.  Additionally, it conducts statistical analysis on the Megapodiidae family to determine if dispersability relates to species extinction risk.
 
 
 ## Modelling Current and Future Malleefowl Species Distribution
 
-All analysis was completed using R version 4.3.1.  Malleefowl occurrence data was downloaded from the Global Biodiversity Information Facility (GBIF) database using the Dismo package.
+Analysis was completed using R version 4.3.1.  Malleefowl occurrence data was downloaded from the Global Biodiversity Information Facility (GBIF, 2022) database using the Dismo package.
 
 ```{r import}
 # Load necessary libraries
@@ -39,7 +39,7 @@ library(dplyr)
 library(bestglm)
 
 # Import data from GBIF and retain only relevant columns.
-m.full <- dismo::gbif("Leipoa", "ocellata") # n = 10490
+m.full <- dismo::gbif("Leipoa", "ocellata") # n = 10494
 keep <- c("adm1", "adm2", "basisOfRecord", "cloc", "collectionCode",
           "coordinateUncertaintyInMeters", "day", "eventDate", "eventTime",
           "gbifID", "geodeticDatum", "georeferenceVerificationStatus",
@@ -49,7 +49,7 @@ keep <- c("adm1", "adm2", "basisOfRecord", "cloc", "collectionCode",
 m <- m.full[, names(m.full) %in% keep]
 ```
 
-Data was cleaned to include only trustworthy, non-duplicate observations from the years covered by our historical climate data (1970 - 2000).  Geo coordinate uncertainty was tolerated up to 1km, since this provided reasonable precision relative to the resolution of our GIS data (2.5 arc-minutes, ~1.3km at Australian longitudes [UPDATE RATIONALE]).  Data were checked for incorrect geo coordinate zeroing, but none was found.  Observations were plotted using the Terra and sf packages to validate.
+Data were cleaned to include only trustworthy, non-duplicate observations from years used as a historic baseline.  Geo coordinate uncertainty was tolerated up to 1km, since this provided reasonable precision relative to GIS data resolution (~3.5-4.5km, see below).  Data were checked for incorrect geo coordinate zeroing, but none was found.  Observations were plotted using the Terra and sf packages to validate.
 
 ```{r clean}
 # Clean data: 1) filter for observation occurrences, 2) remove occurrences
@@ -74,7 +74,7 @@ m <- m[
 # Drop observations that are duplicative at the day/lat/lon level.  Visual spot
 # check confirmed identical metadata for duplicate events at this level.
 m$dup <- duplicated(m[, c("eventDate", "lon", "lat")])
-m <- m[m$dup == FALSE, ] # n = 731
+m <- m[m$dup == FALSE, ] # n = 732
 
 # Declare geo coords extent and plot observations.
 ext <- terra::ext(110, 155, -45, -8)
@@ -90,14 +90,13 @@ plot(
   bg = "lightblue",
   col = "ivory",
   axes = TRUE)
-plot(sf::st_geometry(m.sf), add = TRUE, col = "black", border = NA, pch = 2)
+plot(sf::st_geometry(m.sf), add = TRUE, col = "blue", border = NA, pch = 2)
 ```
+To estimate species distribution, historical (1970-2000) and future climate data were pulled from WorldClim 2.1 using the geodata package.  Future climate data was pulled for two sequential time periods (2021-2040, 2041-2060) using the Hadley GEM3 model and Shared Socioeconomic Pathway 2-4.5.
 
-To estimate species distribution, historical (1970 - 2000) and future climate data were pulled from WorldClim 2.1 using the geodata package.  Future climate data was pulled for two sequential time periods (2021 - 2040, 2041 - 2060) using the Hadley GEM3 model and Shared Socioeconomic Pathway 2-4.5.
+The future time periods were chosen in order to evaluate time scale of malleefowl distribution shift.  SSP 2-4.5 was chosen because it represents a "middle ground" scenario and so should provide a conservative estimate of malleefowl distribution changes.
 
-The two time periods were chosen in order to evaluate time scale of malleefowl distribution shift.  SSP 2-4.5 was chosen because it represents a "middle ground" scenario and so should provide a conservative estimate of the extent of malleefowl distribution changes (i.e., if a more extreme SSP occurs, a more extreme distribution change would be expected).
-
-The WorldClim data provided 19 climate measurements, many of which were conceptually similar or lacked a plausible biological mechanism by which they might impact malleefowl distribution.  The following variables were chosen for consideration as a model coefficient based on their being distinct and plausibly biologically relevant.
+The WorldClim data provided 19 climate measurements, many of which were similar or lacked a plausible biological mechanism to impact malleefowl distribution.  The following variables were chosen as potential model coefficients based on their being distinct and biologically relevant.
 
 BIO1 = Annual Mean Temperature
 BIO3 = Isothermality (BIO2/BIO7) (×100)
@@ -107,11 +106,9 @@ BIO12 = Annual Precipitation
 BIO13 = Precipitation of Wettest Month
 BIO14 = Precipitation of Driest Month
 
-Because malleefowl are likely to have prefernces for elevation, sandy soil, and fertile soil, the geodata package was used to pull elevation data from the Shuttle Radar Topography Mission and sand composition and carbon density (as a proxy for soil richness) data from the SoilGRIDS database.  Sand composition was measured as the percentage of > .05mm particles in fine earth.  Organic carbon density was measured as kg per cubic meter.
+Because malleefowl are likely to have elevation and soil composition preferences (Benshemesh, 2007), the geodata package was used to pull elevation data from the Shuttle Radar Topography Mission and sand composition and carbon density (as a proxy for soil richness) data from the SoilGRIDS database. Sand composition was measured as the percentage of > .05mm particles in fine earth.  Organic carbon density was measured as kg per cubic meter.
 
-Climate and elevation data were pulled at a 2.5 arc-minute resolution (~1.3km at
-Australian latitude).  Soil data were pulled at a 30 arc-second resolution and
-aggregated to a 2.5 arc-minute resolution.
+Climate and elevation data were pulled at a 2.5 arc-minute resolution.  Soil data were pulled at a 30 arc-second resolution and aggregated to a 2.5 arc-minute resolution.  A 2.5 arc-minute resolution was chosen because it is reasonably fine and should encompass an individual malleefowl territory. At Australian latitudes (~ -10° to -40°), 2.5 arc-minutes is between ~ 3.5-4.5km. Radio-tracking demonstrates that malleefowl range from one to several miles within a year (Benshemesh, 2007).
 
 ```{r gather}
 # Pull historical and future climate data as well as elevation and soil data.
@@ -174,16 +171,17 @@ bioclim.f2 <- terra::subset(
   c("bio1", "bio3", "bio5", "bio6", "bio12", "bio13", "bio14"))
 ```
 
-The Geoscience Australia Lambert projection was chosen due to [ADD RATIONALE]. Climate, elevation, and soil rasters were projected onto it and elevation and soil rasters were added to climate rasters.
+The Australia Albers projection was chosen since it is an equal area projection, enabling accurate area comparisons across latitudes.
+
+Climate, elevation, and soil rasters were projected onto it and combined.
 
 ```{r project}
-# Create a grid and project objects into the Geoscience Australia Lambert
-#projection.
+# Create a grid and project objects onto the Australian Albers projection.
 ntm.grid <- terra::rast(
   ext(-2740000, 2400000, -5252000, -944000), 
   res = 20000,
-  crs = "EPSG:3112")
-m.sf <- sf::st_transform(m.sf, crs = "EPSG:3112")
+  crs = "EPSG:3577")
+m.sf <- sf::st_transform(m.sf, crs = "EPSG:3577")
 bioclim.h <- terra::project(bioclim.h, ntm.grid)
 bioclim.f1 <- terra::project(bioclim.f1, ntm.grid)
 bioclim.f2 <- terra::project(bioclim.f2, ntm.grid)
@@ -195,11 +193,17 @@ carbon <- terra::project(carbon, ntm.grid)
 bioclim.h <- c(bioclim.h, elev, sand, carbon)
 bioclim.f1 <- c(bioclim.f1, elev, sand, carbon)
 bioclim.f2 <- c(bioclim.f2, elev, sand, carbon)
+
+# Use au vector from rnaturalearth to mask non-AU islands.
+au.msk <- sf::st_transform(au, crs = "EPSG:3577")
+bioclim.h <- terra::mask(bioclim.h, au.msk["type"])
+bioclim.f1 <- terra::mask(bioclim.f1, au.msk["type"])
+bioclim.f2 <- terra::mask(bioclim.f2, au.msk["type"])
 ```
 
-Logistic regression requires both presence and absence data points.  So, a number of background psuedo-absence points equal to the observation count (n = 731) were generated at random using the Dismo package.
+Since logistic regression requires both presence and absence data points, a number of background psuedo-absence points equal to the observation count (n = 732) were generated at random using the Dismo package.
 
-One potential problem with this approach is that models generated using psuedo-absence data will be less accurate the further the psuedo-absent data points diverge from true absence. Because malleefowl are rare, elusive, and not exhaustively surveyed, there is a meaningful risk that pseudo-absence points will include points where malleefowl are present, but not observed.  This will bias the model.  But, it cannot be adjusted for, just noted as a caveat.
+One potential problem with this approach is that malleefowl are rare, elusive, and not exhaustively surveyed. As a result, there is an elevated likelihood that psuedo-absence points may diverge from true absence (i.e., contain malleefowl). If this is the case, any model will be biased.
 
 ```{r absence}
 # Create random psuedo absence geo coords.
@@ -212,7 +216,7 @@ pseudo.dismo <- dismo::randomPoints(
 pseudo.dismo <- sf::st_as_sf(
   data.frame(pseudo.dismo),
   coords = c("x", "y"),
-  crs = 3112)
+  crs = 3577)
 
 # Plot presence and psuedo-absence points to visually inspect for errors.
 # TODO: Add mask for non-AU
@@ -221,7 +225,7 @@ terra::plot(sf::st_geometry(m.sf), add = TRUE, col = "blue", cex = 1, pch = 2)
 terra::plot(pseudo.dismo, add = TRUE, col = "black", cex = .1, pch = 19)
 ```
 
-To reserve 20% of data for model evaluation, the Dismo package was used to add quintiles. Data were combined into a single binomial presence/absence raster for data fitting.
+To reserve 20% of data for model evaluation, the Dismo package was used to add quintiles. Data were combined into a single presence/absence raster for model fitting.
 
 ```{r combine}
 # Subdivide presence/absence for training/testing.
@@ -236,11 +240,11 @@ absent$pa <- 0
 names(absent) <- c("geometry", "kfold", "pa")
 sf::st_geometry(absent) <- "geometry"
 pa.data <- rbind(present, absent)
-envt.data <- terra::extract(bioclim.h, pa.data)
+envt.data <- terra::extract(bioclim.h, pa.data, ID = FALSE)
 pa.data <- cbind(pa.data, envt.data)
 ```
 
-Including climate, elevation, and soil variables, ten coefficients were considered for inclusion in a logistic GLM. The bestglm package was used to assess the most parsimonious model per Aikake Information Criteria.  AIC balances a trade-off between the log-likelihood of the model (i.e., the likelihood the model could have produced the observations) and the number of coefficients in the model (i.e., it wants the most explanatory power for the least coefficients).
+In total, ten coefficients were considered for a logistic GLM. The bestglm package was used to assess the most parsimonious model per Aikake Information Criteria.  AIC balances a trade-off between the likelihood that a model could have produced the observations and the number of coefficients in the model.  I.e., it wants the most explanatory power for the least coefficients.
 
 ```{r aic}
 # Subset presence/absence data and run bestglm to select best model per AIC.
@@ -252,9 +256,9 @@ best.fit
 best.fit$Subsets
 ```
 
-Model nine, which includes all variables except for Bio3, had the lowest AIC score (681). 
+Model nine, which includes all variables except for Bio3, had the lowest AIC score. 
 
-Comparing model ten (another model with a low AIC score) to model 9, model ten had a lower residual deviance (560.85 vs 561.1).
+Comparing model ten (another model with a low AIC score) to model 9, model ten had lower residual deviance (485.85 vs 485.89), a measure of model fit.
 
 ```{r aic_explain}
 # Fit models 9 and 10
@@ -274,10 +278,9 @@ m.10 <- glm(
 m.9$deviance
 m.10$deviance
 ```
-
 But, the difference was very minor and model ten included an additional coefficient.  AIC reasonably picked model nine as the most parsimonious model.
 
-Model nine was fit and results plotted for evaluation.
+Model nine was fit and the results plotted.
 
 ```{r fitting}
 # Fit the GLM.
@@ -294,12 +297,15 @@ dismo::response(
   glm.model,
   fun = function(x, y, ...) predict(x, y, type = "response", ...))
 ```
+The model results showed that all coefficients were statistically significant except for Bio14 (Precipitation of Driest Month).
 
-The model results show that all coefficients were statistically significant, except for Bio6 (Min Temperature Of The Coldest Month).
+Examining response graphs, the direction of relationships mostly makes biological sense. As expected, probability of presence increases with Bio13 (Precipitation of Wettest Month), sand soil composition, and elevation (malleefowl are known to live in low lying areas).  
 
-Examining response graphs, the direction of relationships makes biological sense. Probability of presence increases with Bio5 (Max Temperature of Warmest Month), Bio13 (Precipitation of Wettest Month), Bio14 (Precipitation of Driest Month), and sand soil composition.  Probability of presence decreases with Bio1 (Annual Mean Temperature) and elevation.  Perhaps oddly, probability of presence decreases with Bio12  (Annual Precipitation) and carbon density of soil.  But, this may simply reflect a preference for against damp forest habitats.
+Other relationships are less intuitive, but make sense in the context of known habitat. For example, it may seem odd that probability of presence decreases with Bio12  (Annual Precipitation) and carbon density of soil.  But, this probably reflects a preference against damp forests.
 
-Next, the model was fit on historical data and ROC curves were plotted.
+Temperature results were slightly more confusing. Probability of presence increases with Bio5 (Max Temperature of Warmest Month). But, it decreases with Bio1 (Annual Mean Temperature) and Bio6 (Min Temperature of Coldest Month).  Why different directions of effect for temperature?  More analysis is needed, but it's not unreasonable to expect that malleefowl may have different reactions to different ends of the temperature range.
+
+Next, the model was fit on historical data and an ROC curve was plotted.
 
 ```{r roc}
 # Create a prediction layer and evaluate the results.
@@ -313,51 +319,51 @@ glm.eval <- dismo::evaluate(
   x = bioclim.h)
 print(glm.eval)
 
-# Plot ROC curves and kappa.
-max.kappa <- plogis(threshold(glm.eval, stat = "kappa"))
-par(mfrow = c(1, 2))
+# Plot ROC curve
 plot(glm.eval, "ROC", type = "l")
-plot(glm.eval, "kappa", type = "l")
-abline(v = max.kappa, lty = 2, col = "blue")
 ```
 
-The area under the ROC curve was .977, indicating little trade-off between sensitivity and specificity across threshold of presence.
+The area under the ROC curve was .96, indicating little trade-off between sensitivity and specificity across threshold of presence.
 
-TODO:  Consider using an approach aside from kappa
+Because there was so little trade-off between specificity and sensitivity, the threshold at which the sum of specificity and sensitivity were maximized was chosen to determine presence in the model.
 
-To maximize overall model fit across sensitivity and specificity, the maximum Cohen's Kappa was used to set a threshold for model prediction.  Finally, estimated current distributed was plotted along with future distribution for 2021 - 2040 and 2041 - 2060.
+```{r threshold}
+# Extract threshold that maximizes specifity plus sensitivity
+spec.sense <- plogis(threshold(glm.eval, stat = "spec_sens"))
+print(spec.sense)
+```
+Finally, estimated current distributed was plotted along with future distribution for 2021-2040 and 2041-2060.
 
 ```{r final}
-# Plot species distribution maps
-# TODO: Mask non-australia islands 
+# Plot species distribution maps 
 par(mfrow = c(2, 2))
-glm.map <- glm.pred >= max.kappa
+glm.map <- glm.pred >= spec.sense
 plot(glm.map, legend = FALSE, col = c("grey", "blue"))
 
 glm.pred.future1 <- predict(bioclim.f1, glm.model, type = "response")
-glm.map.future1 <- glm.pred.future1 >= max.kappa
+glm.map.future1 <- glm.pred.future1 >= spec.sense
 plot(glm.map.future1, legend = FALSE, col = c("grey", "blue"))
 
 glm.pred.future2 <- predict(bioclim.f2, glm.model, type = "response")
-glm.map.future2 <- glm.pred.future2 >= max.kappa
+glm.map.future2 <- glm.pred.future2 >= spec.sense
 plot(glm.map.future2, legend = FALSE, col = c("grey", "blue"))
 
 # Plot overlaid species distribution maps.
 plot(glm.map, legend = FALSE, col = c("grey", "blue"))
-f1.msk <- ifel(glm.pred.future1 < max.kappa, NA, 1)
-f1m <- mask(glm.map.future1, f1.msk)
-glm.map.future1 <- mask(f1m, f1m)
-plot(glm.map.future1, legend = FALSE, add = TRUE, col = "lightblue")
-f2.msk <- ifel(glm.pred.future2 < max.kappa, NA, 1)
-f2m <- mask(glm.map.future2, f2.msk)
-glm.map.future2 <- mask(f2m, f2m)
-plot(glm.map.future2, legend = FALSE, add = TRUE, col = c("lightblue1"))
+f1.msk <- ifel(glm.pred.future1 < spec.sense, NA, 1)
+f1m <- terra::mask(glm.map.future1, f1.msk)
+glm.map.future1.p <- terra::mask(f1m, f1m)
+plot(glm.map.future1.p, legend = FALSE, add = TRUE, col = "green")
+f2.msk <- ifel(glm.pred.future2 < spec.sense, NA, 1)
+f2m <- terra::mask(glm.map.future2, f2.msk)
+glm.map.future2.p <- terra::mask(f2m, f2m)
+plot(glm.map.future2.p, legend = FALSE, add = TRUE, col = c("yellow"))
 ```
 
-Results suggest that malleefowl range is expected to contract significantly in 2021 - 2040 and even more significantly in 2040 - 2060.  
+Results suggested that malleefowl range will contract significantly in 2021-2040 and even more significantly in 2040-2060.
 
 ```{r results}
-# Table of shift from 1970 - 2000 to 2021 - 2040
+# Table of shift from 1970-2000 to 2021-2040
 h.f1 <- arrange(
   data.frame(
     table(values(glm.map), values(glm.map.future1))),
@@ -365,7 +371,7 @@ h.f1 <- arrange(
   Var2)
 colnames(h.f1) <- c("Hist", "F1", "Freq")
 
-# Table of shift from 1970 - 2000 to 2041 - 2060
+# Table of shift from 1970-2000 to 2041-2060
 h.f2 <- arrange(
   data.frame(
     table(values(glm.map), values(glm.map.future2))),
@@ -373,19 +379,17 @@ h.f2 <- arrange(
   Var2)
 colnames(h.f2) <- c("Hist", "F2", "Freq")
 
-# TODO:  Find a way to extract results from rasters directly.
-# Calculate shift from 1970 - 2000 to 2021 - 2040 
-(8 + 646) / (737 + 646)
+# Calculate shift from 1970-2000 to 2021-2040 
+sum(h.f1[h.f1$F1 == "TRUE", ]$Freq) / sum(h.f1[h.f1$Hist == "TRUE", ]$Freq)
 
-# Calculate shift from 1970 - 2000 to 2041 - 2060
-(20 + 204) / (1179 + 204)
+# Calculate shift from 1970-2000 to 2041-2060
+sum(h.f2[h.f2$F2 == "TRUE", ]$Freq) / sum(h.f2[h.f2$Hist == "TRUE", ]$Freq)
 ```
+Specifically, malleefowl habitat is expected to decline to 41% of its historical range by 2021-2040 and to 10% by 2041-2060.
 
-Overall, malleefowl habitat is expected to decline by 47% by 2021 - 2040 and by 16% by 2041 - 2060.
+In particular, Western Australia is forecast to be uninhabitable by malleefowl between 2040 and 2060.  The last significant viable habitat is expected to be in western New South Wales.
 
-In particular, southwest Australia is forecast to be uninhabitable by malleefowl between 2040 and 2060.  The last significant patch of viable habitat is expected to be [WHEREVER THAT IS].
-
-This suggests that focusing malleefowl conservation efforts in [WHEREVER THAT IS] would be the most efficient use of scarce conservation funding.
+This suggests that focusing malleefowl conservation efforts in NSW and abandoning efforts in WA would be the most prudent course of action if conservation dollars are limited.
 
 
 ## Statistical Analysis of Megapodiidae Extinction Risk vs Hand-Wing Index
@@ -455,6 +459,14 @@ In fact, there is a worse problem:  the data clearly aren't independent!  These 
 ## Citations
 
 Benshemesh, J. (2007). National Recovery Plan for Malleefowl. Department for Environment and Heritage, South Australia
+
+Blair C. ParsonsA,B,D, Jeff C. ShortC and J. Dale RobertsB (2008).  Contraction in the range of Malleefowl (Leipoa ocellata) in Western Australia: a comparative assessment using presence-only and presence–absence datasets
+
+Booth 1986, Effect of Temperature on Development of Mallee Fowl Leipoa ocellata Eggs
+
+Peri Stenhouse a and Katherine Moseby b, 2022 Trends in breeding activity of the threatened Malleefowl (Leipoa ocellata): what can we expect under a changing climate?
+
+
 
 (Blakers et al. 1984)
 
