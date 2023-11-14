@@ -28,7 +28,7 @@ This report aims to use a presence/absence logistic GLM to estimate the likely i
 
 Analysis was completed using R version 4.3.1.  Malleefowl occurrence data was downloaded from the Global Biodiversity Information Facility (GBIF, 2022) database using the Dismo package.
 
-```{r import}
+```{r import, error=FALSE, warning=FALSE, message=FALSE}
 # Load necessary libraries
 library(dismo)
 library(terra)
@@ -51,7 +51,7 @@ m <- m.full[, names(m.full) %in% keep]
 
 Data were cleaned to include only trustworthy, non-duplicate observations from years used as a historic baseline.  Geo coordinate uncertainty was tolerated up to 1km, since this provided reasonable precision relative to GIS data resolution (~3.5-4.5km, see below).  Data were checked for incorrect geo coordinate zeroing, but none was found.  Observations were plotted using the Terra and sf packages to validate.
 
-```{r clean}
+```{r clean, error=FALSE, warning=FALSE, message=FALSE}
 # Clean data: 1) filter for observation occurrences, 2) remove occurrences
 # without geo coords, 3) remove uncertain occurrences (unverified, obfuscated
 # geo coords, > 1km geo coord uncertainty), 3) filter for records in baseline
@@ -98,19 +98,19 @@ The future time periods were chosen in order to evaluate time scale of malleefow
 
 The WorldClim data provided 19 climate measurements, many of which were similar or lacked a plausible biological mechanism to impact malleefowl distribution.  The following variables were chosen as potential model coefficients based on their being distinct and biologically relevant.
 
-BIO1 = Annual Mean Temperature
-BIO3 = Isothermality (BIO2/BIO7) (×100)
-BIO5 = Max Temperature of Warmest Month
-BIO6 = Min Temperature of Coldest Month
-BIO12 = Annual Precipitation
-BIO13 = Precipitation of Wettest Month
-BIO14 = Precipitation of Driest Month
+BIO1 = Annual Mean Temperature  
+BIO3 = Isothermality (BIO2/BIO7) (×100)  
+BIO5 = Max Temperature of Warmest Month  
+BIO6 = Min Temperature of Coldest Month  
+BIO12 = Annual Precipitation  
+BIO13 = Precipitation of Wettest Month  
+BIO14 = Precipitation of Driest Month  
 
 Because malleefowl are likely to have elevation and soil composition preferences (Benshemesh, 2007), the geodata package was used to pull elevation data from the Shuttle Radar Topography Mission and sand composition and carbon density (as a proxy for soil richness) data from the SoilGRIDS database. Sand composition was measured as the percentage of > .05mm particles in fine earth.  Organic carbon density was measured as kg per cubic meter.
 
 Climate and elevation data were pulled at a 2.5 arc-minute resolution.  Soil data were pulled at a 30 arc-second resolution and aggregated to a 2.5 arc-minute resolution.  A 2.5 arc-minute resolution was chosen because it is reasonably fine and should encompass an individual malleefowl territory. At Australian latitudes (~ -10° to -40°), 2.5 arc-minutes is between ~ 3.5-4.5km. Radio-tracking demonstrates that malleefowl range from one to several miles within a year (Benshemesh, 2007).
 
-```{r gather}
+```{r gather, error=FALSE, warning=FALSE, message=FALSE}
 # Pull historical and future climate data as well as elevation and soil data.
 # Crop to Australia geo extent.
 bioclim.h <- geodata::worldclim_global(var = "bio", res = 2.5, path = "data")
@@ -175,7 +175,7 @@ The Australia Albers projection was chosen since it is an equal area projection,
 
 Climate, elevation, and soil rasters were projected onto it and combined.
 
-```{r project}
+```{r project, error=FALSE, warning=FALSE, message=FALSE}
 # Create a grid and project objects onto the Australian Albers projection.
 ntm.grid <- terra::rast(
   ext(-2740000, 2400000, -5252000, -944000), 
@@ -205,7 +205,7 @@ Since logistic regression requires both presence and absence data points, a numb
 
 One potential problem with this approach is that malleefowl are rare, elusive, and not exhaustively surveyed. As a result, there is an elevated likelihood that psuedo-absence points may diverge from true absence (i.e., contain malleefowl). If this is the case, any model will be biased.
 
-```{r absence}
+```{r absence, error=FALSE, warning=FALSE, message=FALSE}
 # Create random psuedo absence geo coords.
 n.pseudo <- nrow(m.sf)
 land <- bioclim.h[["elev"]] > 0
@@ -227,7 +227,7 @@ terra::plot(pseudo.dismo, add = TRUE, col = "black", cex = .1, pch = 19)
 
 To reserve 20% of data for model evaluation, the Dismo package was used to add quintiles. Data were combined into a single presence/absence raster for model fitting.
 
-```{r combine}
+```{r combine, error=FALSE, warning=FALSE, message=FALSE}
 # Subdivide presence/absence for training/testing.
 m.sf$kfold <- dismo::kfold(m.sf, k = 5)
 pseudo.dismo$kfold <- dismo::kfold(pseudo.dismo, k = 5)
@@ -246,7 +246,7 @@ pa.data <- cbind(pa.data, envt.data)
 
 In total, ten coefficients were considered for a logistic GLM. The bestglm package was used to assess the most parsimonious model per Aikake Information Criteria.  AIC balances a trade-off between the likelihood that a model could have produced the observations and the number of coefficients in the model.  I.e., it wants the most explanatory power for the least coefficients.
 
-```{r aic}
+```{r aic, error=FALSE, warning=FALSE, message=FALSE}
 # Subset presence/absence data and run bestglm to select best model per AIC.
 fit <- as.data.frame(pa.data)
 fit <- fit[, !(names(fit) %in% c("geometry", "kfold"))]
@@ -260,7 +260,7 @@ Model nine, which includes all variables except for Bio3, had the lowest AIC sco
 
 Comparing model ten (another model with a low AIC score) to model 9, model ten had lower residual deviance (485.85 vs 485.89), a measure of model fit.
 
-```{r aic_explain}
+```{r aic_explain, error=FALSE, warning=FALSE, message=FALSE}
 # Fit models 9 and 10
 m.9 <- glm(
   pa ~ bio1 + bio5 + bio6 + bio12 + bio13 + bio14 + elev + sand + ocd,
@@ -282,7 +282,7 @@ But, the difference was very minor and model ten included an additional coeffici
 
 Model nine was fit and the results plotted.
 
-```{r fitting}
+```{r fitting, error=FALSE, warning=FALSE, message=FALSE}
 # Fit the GLM.
 glm.model <- glm(
   pa ~ bio1 + bio5 + bio6 + bio12 + bio13 + bio14 + elev + sand + ocd,
@@ -297,17 +297,17 @@ dismo::response(
   glm.model,
   fun = function(x, y, ...) predict(x, y, type = "response", ...))
 ```
-The model results showed that all coefficients were statistically significant except for Bio14 (Precipitation of Driest Month).
+The model results showed that all coefficients were statistically significant except for Bio6 (Min Temperature of Coldest Month). Examining response graphs, the direction of relationships mostly makes biological sense.
 
-Examining response graphs, the direction of relationships mostly makes biological sense. As expected, probability of presence increases with Bio13 (Precipitation of Wettest Month), sand soil composition, and elevation (malleefowl are known to live in low lying areas).  
+As expected, probability of presence increases with Bio13 (Precipitation of Wettest Month), Bio14 (Precipitation of Driest Month), and sand soil composition.  Probability of presence decreases with elevation (malleefowl are known to live in low lying areas).
 
-Other relationships are less intuitive, but make sense in the context of known habitat. For example, it may seem odd that probability of presence decreases with Bio12  (Annual Precipitation) and carbon density of soil.  But, this probably reflects a preference against damp forests.
+Other relationships are less intuitive.  For example, contrary to expectations, probability of presence decreases with Bio12  (Annual Precipitation) and carbon density of soil.  But, this likely reflects a preference against damp forested habitats overall rather than a preference against these variables within viable malleefowl habitat.
 
-Temperature results were slightly more confusing. Probability of presence increases with Bio5 (Max Temperature of Warmest Month). But, it decreases with Bio1 (Annual Mean Temperature) and Bio6 (Min Temperature of Coldest Month).  Why different directions of effect for temperature?  More analysis is needed, but it's not unreasonable to expect that malleefowl may have different reactions to different ends of the temperature range.
+The most unexpected results were around temperature.  Prior research suggested that increased maximum winter temperatures resulted in reduced breeding success (Stenhouse & Moseby, 2022). But, Bio6 was not statistically significant.  Moreover, probability of presence increased with Bio5 (Max Temperature of Warmest Month) and decreased with Bio1 (Annual Mean Temperature). A positive relationship with Bio5 could simply be a preference for arid environments.  But, it's odd that the direction of the relationship reversed for Bio1.  More analysis is needed to understand this dynamic.
 
 Next, the model was fit on historical data and an ROC curve was plotted.
 
-```{r roc}
+```{r roc, error=FALSE, warning=FALSE, message=FALSE}
 # Create a prediction layer and evaluate the results.
 glm.pred <- terra::predict(bioclim.h, glm.model, type = "response")
 test.present <- sf::st_coordinates(subset(pa.data, pa == 1 & kfold == 1))
@@ -327,15 +327,16 @@ The area under the ROC curve was .96, indicating little trade-off between sensit
 
 Because there was so little trade-off between specificity and sensitivity, the threshold at which the sum of specificity and sensitivity were maximized was chosen to determine presence in the model.
 
-```{r threshold}
+```{r threshold, error=FALSE, warning=FALSE, message=FALSE}
 # Extract threshold that maximizes specifity plus sensitivity
 spec.sense <- plogis(threshold(glm.eval, stat = "spec_sens"))
 print(spec.sense)
 ```
 Finally, estimated current distributed was plotted along with future distribution for 2021-2040 and 2041-2060.
 
-```{r final}
-# Plot species distribution maps 
+```{r final, error=FALSE, warning=FALSE, message=FALSE}
+# Plot species distribution maps
+# TODO:  Add legends
 par(mfrow = c(2, 2))
 glm.map <- glm.pred >= spec.sense
 plot(glm.map, legend = FALSE, col = c("grey", "blue"))
@@ -362,7 +363,7 @@ plot(glm.map.future2.p, legend = FALSE, add = TRUE, col = c("yellow"))
 
 Results suggested that malleefowl range will contract significantly in 2021-2040 and even more significantly in 2040-2060.
 
-```{r results}
+```{r results, error=FALSE, warning=FALSE, message=FALSE}
 # Table of shift from 1970-2000 to 2021-2040
 h.f1 <- arrange(
   data.frame(
