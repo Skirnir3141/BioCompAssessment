@@ -21,7 +21,7 @@ In 2007, the Australian government instituted a five year $2.4M AUD malleefowl N
 
 However, these initiatives are unlikely to succeed if climate change renders current malleefowl habitat nonviable. Prior research has indicated that reduction in rainfall and increase in temperature may be particularly significant, since they impact breeding activity (Stenhouse & Moseby, 2022).
 
-This report aims to use a presence/absence logistic GLM to estimate the likely impact of climate change on malleefowl species distribution in order to inform malleefowl recovery.  If malleefowl habitat is expected to expand or contract, NRP objectives may need to be adjusted.  Additionally, it conducts statistical analysis on the Megapodiidae family to determine if dispersability relates to species extinction risk.
+This report aims to use a presence/absence logistic GLM to estimate the likely impact of climate change on malleefowl species distribution in order to inform malleefowl recovery.  If malleefowl habitat is expected to expand or contract, NRP objectives may need to be adjusted.  Additionally, it conducts statistical analysis on the Megapodiidae family to determine if dispersability relates to extinction risk.
 
 
 ## Modelling Current and Future Malleefowl Species Distribution
@@ -395,13 +395,15 @@ This suggests that focusing malleefowl conservation efforts in NSW and abandonin
 
 ## Statistical Analysis of Megapodiidae Extinction Risk vs Hand-Wing Index
 
-The above analysis provided recommendations to guide Australian malleefowl conservation.  But, among all Megapodiidae, should the malleefowl be prioritized by global conservationists?  If so, what factors give rise to malleefowl vulnerability?  Perhaps wing size?
+The Hand-Wing Index is a commonly used proxy for avian ability to disperse, which is thought to influence extinction risk (Sheard et al, 2020). I.e., more mobile species are at less risk of extinction.
 
-EDGE score and Hand-Wing Index can be used to evaluate these questions. EDGE (Evolutionary Distinct Globally Endangered) scores measure species' evolutionary uniqueness along with their extinction risk.  Hand-Wing Index measures [WHATEVER IT MEASURES.]
+However, this relationship may not hold among Megapodiidae species.  While some are strong flyers, many are heavy and poor at flying (Harris, Burks, and Leache, 2014). So, HWI may be a poor proxy for dispersability and so a poor predictor of extinction risk.
 
-Imperial College provided data on 30 individuals across 10 Megapodiidae species.  This data was cleaned and average Hand-Wing Index across individuals was taken per species. 
+To evaluate, data on Evolutionary Distinct Globally Endangered (EDGE) scores, which prioritize species for conservation based on evolutionary uniqueness and extinction risk, and HWI were analyzed.  Data for 30 Megapodiidae individuals across 10 species were provided by Imperial College.
 
-```{r stats_setup}
+First, data were consolidated and average HWI per species was taken.
+
+```{r stats_setup, error=FALSE, warning=FALSE, message=FALSE}
 # Set working directory
 setwd("C:/Users/Michael Jordan/Desktop/R/BioCompAssessment")
 
@@ -418,14 +420,12 @@ b.agg <- dplyr::arrange(
   desc(EDGE))
 
 # Output results
-b.agg
+print(b.agg)
 ```
 
-The malleefowl has a high EDGE score (although not the highest!) and there may be some relationship between HWI and EDGE score.  It seems like species with higher HWI might have  higher EDGE scores.
+Next, a linear model of HWI on EDGE score was fit.
 
-To evaluate, a linear model of HWI on EDGE score was fit.
-
-```{r stats_model}
+```{r stats_model, error=FALSE, warning=FALSE, message=FALSE}
 # Fit linear model
 m.b <- lm(EDGE ~ avg.HWI, data = b.agg)
 
@@ -433,26 +433,26 @@ m.b <- lm(EDGE ~ avg.HWI, data = b.agg)
 summary(m.b)
 ```
 
-The model shows that HWI is not a statistically significant predictor vs an alpha of 5%.  The p-value is very high at .46.
+As expected, HWI was not a statistically significant predictor of EDGE score.  The p-value of HWI was .46, well above an alpha of 5%, causing the null hypothesis of no relationship between HWI and EDGE score to fail to be rejected.
 
-But, is this a good model?  R-squared is 7%, showing that the model explains only a very small percentage of the variance in the data. Is linear regression even appropriate in this case?
+Additionally, the model itself was a poor fit for the data. R-squared was 7%, demonstrating that the model explained only a small percentage of variation. 
+
+To validate the applicability of linear regression to these data, model diagnostic plots were plotted and assessed.
 
 ```{r stats_plot}
 # Plot linear model
-par(mfrow = c(2,2))
-plot(m.b)
-
-# Plot histogram of residuals
-hist(m.b$residuals)
+par(mfrow = c(2,1))
+plot(m.b, which = 1:2)
 ```
 
-It's difficult to tell because degrees of freedom are low.  But, there seem to be two issues.
+This demonstrated two issues.
 
-Examining the plot of residuals vs fitted values shows significant heteroskedasticity.  Variance is much higher on the low end of the distribution than on the high end.  This will result HWI being a biased estimator.
+First, the plot of residuals vs fitted values exhibited heteroskedasticity.  Variance is much higher on the low end of the distribution than on the high end. Second, the Q-Q plot of z-transformed residuals vs theoretical quantiles of the z distribution showed that the residuals are not normally distributed.  If residuals were normally distributed, they would line up along the straight line. Instead, they curve off it at extremes of the distribution.
 
-Examining the Q-Q plot of z-transformed residuals vs theoretical quantiles of the z distribution, the residuals don't look normally distributed.  If they were normal, they would align along the straight line.  Instead, they curve off it at the high and low ends of the distribution.  Looking at a histogram of residuals confirms it, they have a strong right skew.
+These issues will cause the estimate of model standard error (and therefore p-values and statistical significance) to be biased.  There is likely one more issue as well: because the data are evolutionarily related species and not random observations, the assumption of independence is violated.
 
-In fact, there is a worse problem:  the data clearly aren't independent!  These aren't random observations from a pool of hypothetical Megapodiidae species.  They're evoluationarily related species. 
+To assess 
+
 
 ## Summary
 
@@ -465,16 +465,8 @@ Blair C. ParsonsA,B,D, Jeff C. ShortC and J. Dale RobertsB (2008).  Contraction 
 
 Booth 1986, Effect of Temperature on Development of Mallee Fowl Leipoa ocellata Eggs
 
+Rebecca B. Harris1,2*, Sharon M. Birks2 and Adam D. Leache Incubator birds: biogeographical origins and evolution of underground nesting in megapodes 
+
 Peri Stenhouse a and Katherine Moseby b, 2022 Trends in breeding activity of the threatened Malleefowl (Leipoa ocellata): what can we expect under a changing climate?
 
-
-
-(Blakers et al. 1984)
-
-Priddel & Wheeler 2003
-
-Copley & Williams 1995)
-
-Hill 1989
-
-Brickhill 1987b  #unseasonable weather hurting egg incubation
+Sheard etc, 2020, Ecological drivers of global gradients in avian dispersal inferred from wing morphology
