@@ -11,11 +11,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Introduction & Rationale
 
-The malleefowl (Leipoa ocellata) is a large (~2kg) ground-dwelling bird endemic to Australia. It is a member of the Megapodiidae family, which incubate their eggs in mounds that provide an external source of heat rather than in nests using body heat (Parsons, Short, and Roberts, 2008).  Within the Megapodiidae, the malleefowl is the only species to inhabit arid to semi-arid shrublands and low woodlands rather than damp forests (Benshemesh, 2007).
+The malleefowl (Leipoa ocellata) is a large (~2kg) ground-dwelling bird endemic to Australia. It is a member of the Megapodiidae family, which incubate their eggs in mounds that provide an external source of heat rather than in nests using body heat (Parsons, Short & Roberts, 2008).  Within the Megapodiidae, the malleefowl is the only species to inhabit arid to semi-arid shrublands and low woodlands rather than damp forests (Benshemesh, 2007).
 
 To facilitate incubation in these environments, malleefowl developed particularly complex mounds. Malleefowl mounds are large (~3-5m in diameter x 1m deep), scraped out of the ground, filled with leaf litter, and covered with sand, which acts as insulation (Benshemesh, 2007). Solar radiation and fermentation of organic matter maintain a temperature within ~3-5°C of 34°C, which is necessary for egg development (Booth, 1986).  Aside from sand and leaf litter, malleefowl habitat requirements are not otherwise well understood.  However, population concentration is observed to be highest in areas with higher rainfall and more fertile soil, likely due to increased food supply (Benshemesh, 2007).
 
-Although the malleefowl was widely distributed across Australia prior to European colonization, its population declined significantly post colonization due to habitat loss and predation by introduced predators (Parsons, Short, and Roberts, 2008). Today, the malleefowl is listed as vulnerable on the IUCN Red List and under the Australian Environment Protection and Biodiversity Conservation Act of 1999.
+Although the malleefowl was widely distributed across Australia prior to European colonization, its population declined significantly post colonization due to habitat loss and predation by introduced predators (Parsons, Short & Roberts, 2008). Today, the malleefowl is listed as vulnerable on the IUCN Red List and under the Australian Environment Protection and Biodiversity Conservation Act of 1999.
 
 In 2007, the Australian government instituted a five year $2.4M AUD malleefowl National Recovery Plan (Benshemesh, 2007). Although the report lacked sufficient evidence to assess malleefowl conservation status across Australia, it cited steep declines in monitored populations to justify action. The NRP set several objectives, including reducing habitat loss and reducing grazing pressure by livestock.
 
@@ -37,6 +37,7 @@ library(sf)
 library(rnaturalearth)
 library(dplyr)
 library(bestglm)
+library(ggplot2)
 
 # Import data from GBIF and retain only relevant columns.
 m.full <- dismo::gbif("Leipoa", "ocellata") # n = 10494
@@ -77,20 +78,22 @@ m$dup <- duplicated(m[, c("eventDate", "lon", "lat")])
 m <- m[m$dup == FALSE, ] # n = 732
 
 # Declare geo coords extent and plot observations.
-ext <- terra::ext(110, 155, -45, -8)
+ext <- terra::ext(110, 155, -44, -10)
 m.sf <- sf::st_as_sf(m, coords = c("lon", "lat"), crs = 4326)
 au <- rnaturalearth::ne_countries(
   country = "australia",
   scale = "large",
   returnclass = "sf")
-plot(
-  sf::st_geometry(au),
-  xlim = ext[1:2],
-  ylim = ext[3:4],
-  bg = "lightblue",
-  col = "ivory",
-  axes = TRUE)
-plot(sf::st_geometry(m.sf), add = TRUE, col = "blue", border = NA, pch = 2)
+ggplot2::ggplot() +
+  ggplot2::ggtitle("Malleefowl occurrences 1970-2000") +
+  ggplot2::geom_sf(data = au, fill = "ivory") +
+  ggplot2::geom_sf(data = sf::st_geometry(m.sf), col = "blue", pch = 2) +
+  ggplot2::theme(
+    panel.background = element_rect(fill = "lightblue"),
+    panel.ontop = FALSE,
+    panel.grid = element_blank(),
+    plot.title = element_text(size = 12, hjust = 0.5, family = "sans")) +
+  ggplot2::coord_sf(xlim = ext[1:2], ylim = ext[3:4])
 ```
 To estimate species distribution, historical (1970-2000) and future climate data were pulled from WorldClim 2.1 using the geodata package.  Future climate data was pulled for two sequential time periods (2021-2040, 2041-2060) using the Hadley GEM3 model and Shared Socioeconomic Pathway 2-4.5.
 
@@ -99,7 +102,7 @@ The future time periods were chosen in order to evaluate time scale of malleefow
 The WorldClim data provided 19 climate measurements, many of which were similar or lacked a plausible biological mechanism to impact malleefowl distribution.  The following variables were chosen as potential model coefficients based on their being distinct and biologically relevant.
 
 BIO1 = Annual Mean Temperature  
-BIO3 = Isothermality (BIO2/BIO7) (×100)  
+BIO3 = Isothermality  
 BIO5 = Max Temperature of Warmest Month  
 BIO6 = Min Temperature of Coldest Month  
 BIO12 = Annual Precipitation  
@@ -395,9 +398,9 @@ This suggests that focusing malleefowl conservation efforts in NSW and abandonin
 
 ## Statistical Analysis of Megapodiidae Extinction Risk vs Hand-Wing Index
 
-The Hand-Wing Index is a commonly used proxy for avian ability to disperse, which is thought to influence extinction risk (Sheard et al, 2020). I.e., more mobile species are at less risk of extinction.
+The Hand-Wing Index is a commonly used proxy for avian ability to disperse, which is thought to influence extinction risk (Sheard et al., 2020). I.e., more mobile species are at less risk of extinction.
 
-However, this relationship may not hold among Megapodiidae species.  While some are strong flyers, many are heavy and poor at flying (Harris, Burks, and Leache, 2014). So, HWI may be a poor proxy for dispersability and so a poor predictor of extinction risk.
+However, this relationship may not hold among Megapodiidae species.  While some are strong flyers, many are heavy and poor at flying (Harris, Burks & Leache, 2014). So, HWI may be a poor proxy for dispersability and so a poor predictor of extinction risk.
 
 To evaluate, data on Evolutionary Distinct Globally Endangered (EDGE) scores, which prioritize species for conservation based on evolutionary uniqueness and extinction risk, and HWI were analyzed.  Data for 30 Megapodiidae individuals across 10 species were provided by Imperial College.
 
@@ -423,7 +426,7 @@ b.agg <- dplyr::arrange(
 print(b.agg)
 ```
 
-Next, a linear model of HWI on EDGE score was fit.
+Next, a linear model of EDGE score on HWI was fit.
 
 ```{r stats_model, error=FALSE, warning=FALSE, message=FALSE}
 # Fit linear model
@@ -433,13 +436,19 @@ m.b <- lm(EDGE ~ avg.HWI, data = b.agg)
 summary(m.b)
 ```
 
-As expected, HWI was not a statistically significant predictor of EDGE score.  The p-value of HWI was .46, well above an alpha of 5%, causing the null hypothesis of no relationship between HWI and EDGE score to fail to be rejected.
+As expected, HWI was not a statistically significant predictor of EDGE score.  The p-value of HWI was .46, above an alpha of 5%, causing the null hypothesis of no relationship between HWI and EDGE score to fail to be rejected.
 
-Additionally, the model itself was a poor fit for the data. R-squared was 7%, demonstrating that the model explained only a small percentage of variation. 
+Additionally, the model itself was a poor fit for the data. R-squared was 7%, demonstrating that the model explained only a small percentage of variation. This is evident in plotting.
 
-To validate the applicability of linear regression to these data, model diagnostic plots were plotted and assessed.
+```{r stats_plot1, error=FALSE, warning=FALSE, message=FALSE}
+# Create a scatter plot of the data and add the linear regression.
+plot(b.agg$avg.HWI, b.agg$EDGE)
+abline(m.b)
+```
 
-```{r stats_plot}
+To validate the applicability of linear regression as a technique to these data, model diagnostic plots were plotted and assessed.
+
+```{r stats_plot2}
 # Plot linear model
 par(mfrow = c(2,1))
 plot(m.b, which = 1:2)
@@ -449,24 +458,27 @@ This demonstrated two issues.
 
 First, the plot of residuals vs fitted values exhibited heteroskedasticity.  Variance is much higher on the low end of the distribution than on the high end. Second, the Q-Q plot of z-transformed residuals vs theoretical quantiles of the z distribution showed that the residuals are not normally distributed.  If residuals were normally distributed, they would line up along the straight line. Instead, they curve off it at extremes of the distribution.
 
-These issues will cause the estimate of model standard error (and therefore p-values and statistical significance) to be biased.  There is likely one more issue as well: because the data are evolutionarily related species and not random observations, the assumption of independence is violated.
+These issues will cause the estimate of model standard error (and therefore p-values and statistical significance) to be biased.
 
-To assess 
+There is likely one more issue as well: because the data are evolutionarily related species and not random observations, the assumption of independence is violated.
+
+Of course, a negative cannot be proven.  But, this approach failed to demonstrate any statistically significant evidence that dispersability as proxied by HWI relates to Megapodiidae extinction risk.
 
 
 ## Summary
 
+Malleefowl are currently listed as a vulnerable species per the IUCN Red List and Australian law.  Although population size 
 
-## Citations
+## Reference List
 
-Benshemesh, J. (2007). National Recovery Plan for Malleefowl. Department for Environment and Heritage, South Australia
+Benshemesh, J. (2007) National Recovery Plan for Malleefowl. *Department for Environment and Heritage, South Australia.* https://www.dcceew.gov.au/sites/default/files/documents/malleefowl.pdf
 
-Blair C. ParsonsA,B,D, Jeff C. ShortC and J. Dale RobertsB (2008).  Contraction in the range of Malleefowl (Leipoa ocellata) in Western Australia: a comparative assessment using presence-only and presence–absence datasets
+Booth, D.T. (1986) Effect of Temperature on Development of Mallee Fowl Leipoa ocellata Eggs. *Physiological Zoology*. 60 (4), 437-445. https://www.jstor.org/stable/30157905
 
-Booth 1986, Effect of Temperature on Development of Mallee Fowl Leipoa ocellata Eggs
+Harris, R.B., Birks, S. & Leaché, A.D (2014) Incubator birds: biogeographical origins and evolution of underground nesting in megapodes (Galliformes: Megapodiidae). *Journal of Biogeography*. 41, 2045-2056. https://doi.org/10.1111/jbi.12357 
 
-Rebecca B. Harris1,2*, Sharon M. Birks2 and Adam D. Leache Incubator birds: biogeographical origins and evolution of underground nesting in megapodes 
+Parsons, B.C., Short, J.C. & Roberts, J.D. (2008) Contraction in the range of Malleefowl (*Leipoa ocellata*) in Western Australia: a comparative assessment using presence-only and presence—absence datasets. *Emu - Austral Ornithology*. 108 (3), 221-231. https://doi.org/10.1071/MU08002
 
-Peri Stenhouse a and Katherine Moseby b, 2022 Trends in breeding activity of the threatened Malleefowl (Leipoa ocellata): what can we expect under a changing climate?
+Sheard, C., Neate-Clegg, M.H.C., Alioravainen, N., Jones, S.E.I.J., Vincent, C., MacGregor, H.E.A., Bregman, T.P., Claramunt, S. & Tobias, J.A. (2020) Ecological drivers of global gradients in avian dispersal inferred from wing morphology. *Nature Communications*. 11, 2463. https://doi.org/10.1038/s41467-020-16313-6
 
-Sheard etc, 2020, Ecological drivers of global gradients in avian dispersal inferred from wing morphology
+Stenhouse P. & Moseby K. (2022) Trends in breeding activity of the threatened Malleefowl (Leipoa ocellata): what can we expect under a changing climate? *Emu - Austral Ornithology*. 122 (1), 51-60. https://doi.org/10.1080/01584197.2022.2045870
