@@ -357,56 +357,12 @@ glm.map.future1 <- glm.pred.future1 >= spec.sense
 glm.pred.future2 <- predict(bioclim.f2, glm.model, type = "response")
 glm.map.future2 <- glm.pred.future2 >= spec.sense
 
-# Plot single scenario maps
-ggplot2::ggplot() +
-  ggplot2::ggtitle("1970-2000 Malleefowl Distribution") +
-  ggplot2::geom_tile(
-    data = as.data.frame(glm.map, xy = TRUE),
-    aes(x = x, y = y, fill = lyr1)) +
-  ggplot2::scale_fill_manual(values = c("ivory", "blue")) +
-  ggplot2::theme(
-    panel.background = element_rect(fill = "lightblue"),
-    panel.ontop = FALSE,
-    panel.grid = element_blank(),
-    plot.title = element_text(size = 12, hjust = 0.5, family = "sans"),
-    axis.title = element_blank(),
-    axis.text = element_blank(),
-    axis.ticks = element_blank(),
-    legend.position = "none")
+# Plot maps
+plot(glm.map, legend = FALSE, col = c("grey", "blue"))
+plot(glm.map.future1, legend = FALSE, col = c("grey", "blue"))
+plot(glm.map.future2, legend = FALSE, col = c("grey", "blue"))
 
-ggplot2::ggplot() +
-  ggplot2::ggtitle("2021-2040 Malleefowl Distribution") +
-  ggplot2::geom_tile(
-    data = as.data.frame(glm.map.future1, xy = TRUE),
-    aes(x = x, y = y, fill = lyr1)) +
-  ggplot2::scale_fill_manual(values = c("ivory", "blue")) +
-  ggplot2::theme(
-    panel.background = element_rect(fill = "lightblue"),
-    panel.ontop = FALSE,
-    panel.grid = element_blank(),
-    plot.title = element_text(size = 12, hjust = 0.5, family = "sans"),
-    axis.title = element_blank(),
-    axis.text = element_blank(),
-    axis.ticks = element_blank(),
-    legend.position = "none")
-
-ggplot2::ggplot() +
-  ggplot2::ggtitle("2041-2060 Malleefowl Distribution") +
-  ggplot2::geom_tile(
-    data = as.data.frame(glm.map.future2, xy = TRUE),
-    aes(x = x, y = y, fill = lyr1)) +
-  ggplot2::scale_fill_manual(values = c("ivory", "blue")) +
-  ggplot2::theme(
-    panel.background = element_rect(fill = "lightblue"),
-    panel.ontop = FALSE,
-    panel.grid = element_blank(),
-    plot.title = element_text(size = 12, hjust = 0.5, family = "sans"),
-    axis.title = element_blank(),
-    axis.text = element_blank(),
-    axis.ticks = element_blank(),
-    legend.position = "none")
-
-# Create masks and plot overlaid scenario map.
+# Create masks.
 f1.msk <- ifel(glm.pred.future1 < spec.sense, NA, 1)
 f1m <- terra::mask(glm.map.future1, f1.msk)
 glm.map.future1.p <- terra::mask(f1m, f1m)
@@ -414,11 +370,9 @@ f2.msk <- ifel(glm.pred.future2 < spec.sense, NA, 1)
 f2m <- terra::mask(glm.map.future2, f2.msk)
 glm.map.future2.p <- terra::mask(f2m, f2m)
 
-
+# Plot overlaid scenario map.
 plot(glm.map, legend = FALSE, col = c("grey", "blue"))
-
 plot(glm.map.future1.p, legend = FALSE, add = TRUE, col = "green")
-
 plot(glm.map.future2.p, legend = FALSE, add = TRUE, col = c("yellow"))
 ```
 
