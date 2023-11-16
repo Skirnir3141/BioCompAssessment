@@ -47,7 +47,7 @@ keep <- c("adm1", "adm2", "basisOfRecord", "cloc", "collectionCode",
           "higherGeography", "identifiedBy", "informationWithheld",
           "institutionCode", "lat", "locality", "lon", "month", "occurrenceID",
           "occurrenceRemarks", "protocol", "recordedBy", "year")
-m <- m.full[, names(m.full) %in% keep]
+m.e <- m.full[, names(m.full) %in% keep]
 ```
 
 Data were cleaned to include only trustworthy, non-duplicate observations from years used as a historic baseline.  Geo coordinate uncertainty was tolerated up to 1km, since this provided reasonable precision relative to GIS data resolution (~3.5-4.5km, see below).  Data were checked for incorrect geo coordinate zeroing, but none was found.  Observations were plotted using the Terra and sf packages to validate.
@@ -57,27 +57,31 @@ Data were cleaned to include only trustworthy, non-duplicate observations from y
 # without geo coords, 3) remove uncertain occurrences (unverified, obfuscated
 # geo coords, > 1km geo coord uncertainty), 3) filter for records in baseline
 # historical years.
-m <- m[
-  m$basisOfRecord %in% c("HUMAN_OBSERVATION", "MACHINE_OBSERVATION")
-  & !is.na(m$lon)
-  & !is.na(m$lat)
+m.e <- m.e[
+  m.e$basisOfRecord %in% c("HUMAN_OBSERVATION", "MACHINE_OBSERVATION")
+  & !is.na(m.e$lon)
+  & !is.na(m.e$lat)
   & (
-    is.na(m$georeferenceVerificationStatus)
-    | m$georeferenceVerificationStatus == "verified")
-  & is.na(m$informationWithheld)
+    is.na(m.e$georeferenceVerificationStatus)
+    | m.e$georeferenceVerificationStatus == "verified")
+  & is.na(m.e$informationWithheld)
   & (
-    is.na(m$coordinateUncertaintyInMeters)
-    | m$coordinateUncertaintyInMeters <= 1000)
-  & !is.na(m$year)
-  & m$year >= 1970
-  & m$year <= 2000, ] # n = 774
+    is.na(m.e$coordinateUncertaintyInMeters)
+    | m.e$coordinateUncertaintyInMeters <= 1000)
+  & !is.na(m.e$year)
+  & m.e$year >= 1970
+  & m.e$year <= 2000, ] # n = 774
 
 # Drop observations that are duplicative at the day/lat/lon level.  Visual spot
 # check confirmed identical metadata for duplicate events at this level.
-m$dup <- duplicated(m[, c("eventDate", "lon", "lat")])
-m <- m[m$dup == FALSE, ] # n = 732
+m.e$dup <- duplicated(m.e[, c("eventDate", "lon", "lat")])
+m.e <- m.e[m.e$dup == FALSE, ] # n = 732
 
-# Declare geo coords extent and plot observations.
+# Create an object with only geo coord columns, since this is all that is
+# needed for plotting.
+m <- m.e[, c(17, 19)]
+
+# Declare geo coords extent, create an SF object for occurrences, and plot observations.
 ext <- terra::ext(110, 155, -44, -10)
 m.sf <- sf::st_as_sf(m, coords = c("lon", "lat"), crs = 4326)
 au <- rnaturalearth::ne_countries(
@@ -85,7 +89,7 @@ au <- rnaturalearth::ne_countries(
   scale = "large",
   returnclass = "sf")
 ggplot2::ggplot() +
-  ggplot2::ggtitle("Malleefowl occurrences 1970-2000") +
+  ggplot2::ggtitle("Malleefowl Observations 1970-2000") +
   ggplot2::geom_sf(data = au, fill = "ivory") +
   ggplot2::geom_sf(data = sf::st_geometry(m.sf), col = "blue", pch = 2) +
   ggplot2::theme(
@@ -222,10 +226,17 @@ pseudo.dismo <- sf::st_as_sf(
   crs = 3577)
 
 # Plot presence and psuedo-absence points to visually inspect for errors.
-# TODO: Add mask for non-AU
 terra::plot(land, col = "grey", legend = FALSE)
 terra::plot(sf::st_geometry(m.sf), add = TRUE, col = "blue", cex = 1, pch = 2)
-terra::plot(pseudo.dismo, add = TRUE, col = "black", cex = .1, pch = 19)
+terra::plot(pseudo.dismo, add = TRUE, col = "black", cex = .2, pch = 19)
+legend(
+  "bottomleft",
+  legend = c("Observation", "Pseudo-Absence"), 
+  col = c("blue", "black"),
+  pch = c(2, 19),
+  pt.cex = c(1, .2),
+  cex = .6,
+  inset = c(.2, .03))
 ```
 
 To reserve 20% of data for model evaluation, the Dismo package was used to add quintiles. Data were combined into a single presence/absence raster for model fitting.
@@ -261,7 +272,7 @@ best.fit$Subsets
 
 Model nine, which includes all variables except for Bio3, had the lowest AIC score. 
 
-Comparing model ten (another model with a low AIC score) to model 9, model ten had lower residual deviance (485.85 vs 485.89), a measure of model fit.
+Comparing model ten (another model with a low AIC score) to model 9, model ten had lower residual deviance, a measure of model fit.
 
 ```{r aic_explain, error=FALSE, warning=FALSE, message=FALSE}
 # Fit models 9 and 10
@@ -326,7 +337,7 @@ print(glm.eval)
 plot(glm.eval, "ROC", type = "l")
 ```
 
-The area under the ROC curve was .96, indicating little trade-off between sensitivity and specificity across threshold of presence.
+The area under the ROC curve was .98, indicating little trade-off between sensitivity and specificity across threshold of presence.
 
 Because there was so little trade-off between specificity and sensitivity, the threshold at which the sum of specificity and sensitivity were maximized was chosen to determine presence in the model.
 
@@ -338,29 +349,76 @@ print(spec.sense)
 Finally, estimated current distributed was plotted along with future distribution for 2021-2040 and 2041-2060.
 
 ```{r final, error=FALSE, warning=FALSE, message=FALSE}
-# Plot species distribution maps
-# TODO:  Add legends
+# Create maps based on threshold that maximizes specificity plus sensitivity.
 par(mfrow = c(2, 2))
 glm.map <- glm.pred >= spec.sense
-plot(glm.map, legend = FALSE, col = c("grey", "blue"))
-
 glm.pred.future1 <- predict(bioclim.f1, glm.model, type = "response")
 glm.map.future1 <- glm.pred.future1 >= spec.sense
-plot(glm.map.future1, legend = FALSE, col = c("grey", "blue"))
-
 glm.pred.future2 <- predict(bioclim.f2, glm.model, type = "response")
 glm.map.future2 <- glm.pred.future2 >= spec.sense
-plot(glm.map.future2, legend = FALSE, col = c("grey", "blue"))
 
-# Plot overlaid species distribution maps.
-plot(glm.map, legend = FALSE, col = c("grey", "blue"))
+# Plot single scenario maps
+ggplot2::ggplot() +
+  ggplot2::ggtitle("1970-2000 Malleefowl Distribution") +
+  ggplot2::geom_tile(
+    data = as.data.frame(glm.map, xy = TRUE),
+    aes(x = x, y = y, fill = lyr1)) +
+  ggplot2::scale_fill_manual(values = c("ivory", "blue")) +
+  ggplot2::theme(
+    panel.background = element_rect(fill = "lightblue"),
+    panel.ontop = FALSE,
+    panel.grid = element_blank(),
+    plot.title = element_text(size = 12, hjust = 0.5, family = "sans"),
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    legend.position = "none")
+
+ggplot2::ggplot() +
+  ggplot2::ggtitle("2021-2040 Malleefowl Distribution") +
+  ggplot2::geom_tile(
+    data = as.data.frame(glm.map.future1, xy = TRUE),
+    aes(x = x, y = y, fill = lyr1)) +
+  ggplot2::scale_fill_manual(values = c("ivory", "blue")) +
+  ggplot2::theme(
+    panel.background = element_rect(fill = "lightblue"),
+    panel.ontop = FALSE,
+    panel.grid = element_blank(),
+    plot.title = element_text(size = 12, hjust = 0.5, family = "sans"),
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    legend.position = "none")
+
+ggplot2::ggplot() +
+  ggplot2::ggtitle("2041-2060 Malleefowl Distribution") +
+  ggplot2::geom_tile(
+    data = as.data.frame(glm.map.future2, xy = TRUE),
+    aes(x = x, y = y, fill = lyr1)) +
+  ggplot2::scale_fill_manual(values = c("ivory", "blue")) +
+  ggplot2::theme(
+    panel.background = element_rect(fill = "lightblue"),
+    panel.ontop = FALSE,
+    panel.grid = element_blank(),
+    plot.title = element_text(size = 12, hjust = 0.5, family = "sans"),
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    legend.position = "none")
+
+# Create masks and plot overlaid scenario map.
 f1.msk <- ifel(glm.pred.future1 < spec.sense, NA, 1)
 f1m <- terra::mask(glm.map.future1, f1.msk)
 glm.map.future1.p <- terra::mask(f1m, f1m)
-plot(glm.map.future1.p, legend = FALSE, add = TRUE, col = "green")
 f2.msk <- ifel(glm.pred.future2 < spec.sense, NA, 1)
 f2m <- terra::mask(glm.map.future2, f2.msk)
 glm.map.future2.p <- terra::mask(f2m, f2m)
+
+
+plot(glm.map, legend = FALSE, col = c("grey", "blue"))
+
+plot(glm.map.future1.p, legend = FALSE, add = TRUE, col = "green")
+
 plot(glm.map.future2.p, legend = FALSE, add = TRUE, col = c("yellow"))
 ```
 
