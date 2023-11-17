@@ -134,7 +134,7 @@ kableExtra::kable_styling(
 
 Because malleefowl are likely to have preferences based on elevation, sandiness of soil, and fertility of soil (Benshemesh, 2007), the geodata package was used to pull elevation data from the Shuttle Radar Topography Mission and soil composition from the SoilGRIDS database. Sand composition was measured as the percentage of > .05mm particles.  Soil fertility was measured using organic carbon density in kg/m^3^.
 
-Climate and elevation data were pulled at a 2.5 arc-minute resolution.  Soil data were pulled at a 30 arc-second resolution and aggregated to 2.5 arc-minutes.  A 2.5 arc-minute resolution was selected because it is reasonably granular, but encompasses an individual malleefowl's territory. At Australian latitudes, 2.5 arc-minutes is ~ 3.5-4.5km, whereas radio-tracking studies have demonstrated that malleefowl range only from one to several miles within a year (Benshemesh, 2007).
+Climate and elevation data were pulled at a 2.5 arc-minute resolution.  Soil data were pulled at a 30 arc-second resolution and aggregated to 2.5 arc-minutes.  A 2.5 arc-minute resolution was selected because it is reasonably granular, but encompasses an individual malleefowl's territory. At Australian latitudes, 2.5 arc-minutes is ~ 3.5-4.5km, whereas radio-tracking studies have demonstrated that malleefowl annual range is within a few miles (Benshemesh, 2007).
 
 ```{r gather, error=FALSE, warning=FALSE, message=FALSE}
 # Pull climate, elevation and soil data and crop to Australia geo extent
@@ -307,7 +307,7 @@ m.10 <- glm(
   family = binomial(link = "logit"),
   subset = kfold != 1)
 ```
-Model 10 had a slightly lower residual deviance (`r round(m.10$deviance, digits = 2)` vs `r round(m.9$deviance, digits = 2)`). But, the difference was minor and model 10 included an additional coefficient.  AIC reasonably picked model 9 as the most parsimonious model.
+Model 10 had a slightly lower residual deviance (`r round(m.10$deviance, digits = 2)` versus `r round(m.9$deviance, digits = 2)`). But, the difference was minor and model 10 included an additional coefficient.  AIC reasonably picked model 9 as the most parsimonious model.
 
 Model 9 was fit and the results plotted.
 
@@ -358,7 +358,7 @@ The area under the ROC curve was `r round(slot(glm.eval, "auc"), digits = 3)`, i
 # Extract threshold that maximizes specifity plus sensitivity
 spec.sense <- plogis(threshold(glm.eval, stat = "spec_sens"))
 ```
-This threshold was `r round(spec.sense, digits = 3)`. Finally, estimated historical distribution was plotted along with future distributions.
+This threshold was `r round(spec.sense, digits = 3)`. Finally, estimated historical and future distributions were plotted.
 
 ```{r final, error=FALSE, warning=FALSE, message=FALSE}
 # Create maps based on threshold that maximizes specificity plus sensitivity
@@ -461,7 +461,7 @@ Specifically, malleefowl habitat will decline to `r scales::percent(round(sum(h.
 In particular, Western Australia is forecast to be uninhabitable by malleefowl by 2040-2060.  The largest viable habitat is expected to be in western New South Wales.  However, some new viable habitat is expected to develop in coastal Queensland.
 
 
-## Statistical Analysis of Megapodiidae Extinction Risk vs Dispersal Ability
+## Statistical Analysis of Megapodiidae Extinction Risk Versus Dispersal Ability
 
 The Hand-Wing Index is a commonly used proxy for avian ability to disperse, which is thought to influence extinction risk (i.e., more mobile species are at less risk of extinction) (Sheard et al., 2020).
 
@@ -484,6 +484,7 @@ b.agg <- dplyr::arrange(
     .groups = "keep",
     avg.HWI = mean(Hand.wing.Index)),
   desc(EDGE))
+names(b.agg)[2] <- "Common Name"
 
 # Output results
 kableExtra::kable_styling(
@@ -492,13 +493,11 @@ kableExtra::kable_styling(
   latex_options = c("hold_position"))
 ```
 
-No relationship between EDGE and HWI was clearly evident.  To evaluate, a linear model of EDGE score on HWI was fit.
+No relationship between EDGE and HWI was evident.  To evaluate, a linear model of EDGE score on HWI was fit.
 
 ```{r stats_model, error=FALSE, warning=FALSE, message=FALSE}
-# Fit linear model
+# Fit and summarise linear model
 m.b <- lm(EDGE ~ avg.HWI, data = b.agg)
-
-# Summarise
 summary(m.b)
 ```
 
@@ -508,6 +507,8 @@ Additionally, the model itself was a poor fit for the data. R-squared was `r rou
 
 ```{r stats_plot1, out.width="75%", out.height="75%", fig.align='center', error=FALSE, warning=FALSE, message=FALSE}
 # Create a scatter plot of the data and add the linear regression
+par(mfrow = c(1, 1), mar = c(4, 4, 0, 0))
+layout(matrix(c(1, 1), nrow = 1), widths = c(2), heights = c(1.5), TRUE)
 plot(b.agg$avg.HWI, b.agg$EDGE, xlab = "avg.HWI", ylab = "EDGE")
 abline(m.b)
 ```
@@ -516,13 +517,14 @@ To validate the applicability of linear regression as a technique to these data,
 
 ```{r stats_plot2, out.width="75%", out.height="75%", fig.align='center', error=FALSE, warning=FALSE, message=FALSE}
 # Plot diagnostics
-par(mfrow = c(1,2), mar = c(3, 3, 3, 3))
+par(mfrow = c(1,2), mar = c(4, 4, 0, 0))
+layout(matrix(c(1, 2), nrow = 1), widths = c(2, 2), heights = c(2, 2), TRUE)
 plot(m.b, which = 1:2)
 ```
 
 This demonstrated two issues.
 
-First, the plot of residuals vs fitted values exhibited heteroskedasticity.  Variance is much higher on the low end of the distribution than on the high end. Second, the Q-Q plot of z-transformed residuals vs theoretical quantiles of the z distribution showed that the residuals are not normally distributed.  If residuals were normally distributed, they would line up along the straight line. Instead, they curve off it at extremes of the distribution.
+First, the plot of residuals versus fitted values exhibited heteroskedasticity.  Variance is much higher on the low end of the distribution than on the high end. Second, the Q-Q plot of z-transformed residuals versus theoretical quantiles of the z distribution showed that the residuals are not normally distributed.  If residuals were normally distributed, they would line up along the straight line. Instead, they curve off it at extremes of the distribution.
 
 These issues will cause the estimate of model standard error (and therefore p-values and confidence intervals) to be biased.  As a result, the model cannot be used to evaluate the statistical significant of HWI on EDGE score.
 
