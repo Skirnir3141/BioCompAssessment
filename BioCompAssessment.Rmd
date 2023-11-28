@@ -18,22 +18,18 @@ knitr::include_graphics("malleefowl.jpg")
 
 ## Introduction & Rationale
 
-The malleefowl (*Leipoa ocellata*) is a large (~2kg) ground-dwelling bird endemic to Australia. It is a member of the Megapodiidae family, which incubate their eggs in mounds that provide an external source of heat rather than in nests using body heat (Parsons, Short & Roberts, 2008).  Within the Megapodiidae, the malleefowl is the only species to inhabit arid to semi-arid shrublands and low woodlands rather than damp forests (Benshemesh, 2007).
+The malleefowl (*Leipoa ocellata*) is a large (~2kg) ground-dwelling bird endemic to Australia. It is a member of the Megapodiidae family, which incubate their eggs in mounds that provide an external source of heat rather than in nests using body heat (Parsons, Short & Roberts, 2008). Within the Megapodiidae, the malleefowl is notable for being the only species to inhabit semi-arid environments rather than damp forests and for having developed a particularly elaborate mound building technique (Benshemesh, 2007).
 
-To facilitate incubation in these environments, malleefowl developed particularly complex mounds. Malleefowl mounds are large (~3-5m in diameter x 1m deep), scraped out of the ground, filled with leaf litter, and covered with sand, which acts as insulation (Benshemesh, 2007). Solar radiation and fermentation of organic matter maintain a temperature within ~3-5°C of 34°C, which is necessary for egg development (Booth, 1986).  Malleefowl require sand and leaf litter for mound construction, but otherwise their habitat requirements are not well understood.  Although, malleefowl population concentration is observed to be highest in areas with high rainfall and more fertile soil, likely due to increased food supply (Benshemesh, 2007).
+Malleefowl mounds are large (~3-5m in diameter x 1m deep), scraped out of the ground, filled with leaf litter, and covered with sand, which acts as insulation (Benshemesh, 2007). Within mounds, solar radiation and decomposition of organic matter maintain a regular temperature within 3-5°C of 34°C, which is necessary for egg development (Booth, 1986). Because of this intriguing incubation strategy, malleefowl have become locally and internationally beloved and a significant draw for tourists (Benshemesh, 2007). Unfortunately, although malleefowl were widely distributed across Australia prior to European colonization (Parsons, Short & Roberts, 2008), today malleefowl are listed as vulnerable on the IUCN Red List and under the Australian Environment Protection and Biodiversity Conservation Act of 1999.
 
-Although malleefowl were widely distributed across Australia prior to European colonization, their population declined significantly post colonization due to habitat loss and predation by introduced predators (Parsons, Short & Roberts, 2008). Today, malleefowl are listed as vulnerable on the IUCN Red List and under the Australian Environment Protection and Biodiversity Conservation Act of 1999.
+In 2007, to correct malleefowl population declines, the Australian government instituted a $2.4M AUD malleefowl National Recovery Plan (NRP) (Benshemesh, 2007). To justify this investment, the NRP cited steep declines in monitored malleefowl populations. It set several objectives, including reducing habitat loss and reducing grazing pressure by livestock. However, the NRP may not succeed if it fails to understand current and future malleefowl distribution. Although some current malleefowl populations are monitored, malleefowl distribution is not well established across all of Australia (Benshemesh, 2007). Additionally, climate change may drive changes to malleefowl habitat. Within monitored areas, malleefowl population concentration is observed to be highest in areas with high rainfall, likely due to increased food supply (Benshemesh, 2007). Prior research also indicates that temperature may be significant, since egg temperature effects breeding success (Stenhouse & Moseby, 2022). If rainfall or temperature shift, malleefowl may gain or lose viable habitat.
 
-In 2007, the Australian government instituted a five year $2.4M AUD malleefowl National Recovery Plan (Benshemesh, 2007). Although the report lacked sufficient evidence to assess malleefowl conservation status across Australia, it cited steep declines in monitored populations to justify action. The NRP set several objectives, including reducing habitat loss and reducing grazing pressure by livestock.
-
-However, these initiatives are unlikely to succeed if climate change renders current malleefowl habitat nonviable. Prior research has indicated that reduction in rainfall and increase in temperature may be particularly significant climatic factors, since they can impact breeding activity (Stenhouse & Moseby, 2022).
-
-This report uses a presence/absence logistic GLM To estimate the impact of climate change on malleefowl distribution.  If malleefowl habitat is expected to expand or contract, NRP objectives may need to be adjusted.  Additionally, it conducts statistical analysis on the Megapodiidae family to determine if dispersal ability relates to extinction risk.
+This report seeks to inform the malleefowl NRP by modeling current and future malleefowl distribution using environmental and climatic variables. This information will allow for better targeting of conservation funding in areas of greatest long term potential.  Additionally, this reports conducts statistical analysis on the Megapodiidae family to determine if dispersal ability relates to extinction risk.
 
 
 ## Modelling Current and Future Malleefowl Species Distribution
 
-Analysis was completed using R version 4.3.1.  Malleefowl occurrence data were downloaded from the Global Biodiversity Information Facility (GBIF, 2022) database using the dismo package.
+Analysis was completed using R version 4.3.1. Malleefowl occurrence data were downloaded from the Global Biodiversity Information Facility (GBIF, 2022) database using the dismo package.
 
 ```{r import, error=FALSE, warning=FALSE, message=FALSE}
 # Load necessary libraries
@@ -59,7 +55,7 @@ keep <- c("adm1", "adm2", "basisOfRecord", "cloc", "collectionCode",
 m.e <- m.full[, names(m.full) %in% keep]
 ```
 
-Data were cleaned to include only trustworthy, non-duplicate observations from years used as a historic baseline for climate forecasting.  Geo coordinate uncertainty was tolerated up to 1km, since this provided reasonable precision relative to GIS data resolution (~3.5-4.5km, see below).  Data were checked for incorrect geo coordinate zeroing, but none was found.
+Data were cleaned to include only trustworthy, non-duplicate observations from years used as a historic baseline for climate forecasting. Geo coordinate uncertainty was tolerated up to 1km, since this provided reasonable precision relative to GIS data resolution (~3.5-4.5km). Data were checked for incorrect geo coordinate zeroing, but none was found.
 
 ```{r clean, error=FALSE, out.width="75%", out.height="75%", fig.align='center', warning=FALSE, message=FALSE}
 # Clean data: 1) filter for observation occurrences, 2) remove occurrences
@@ -89,9 +85,9 @@ m.e <- m.e[m.e$dup == FALSE, ]
 m <- m.e[, c(17, 19)]
 ```
 
-Overall, data cleaning reduced records from `r prettyNum(nrow(m.full), big.mark = ",", scientific = FALSE)` to `r prettyNum(nrow(m), big.mark = ",", scientific = FALSE)`. Observations were plotted using the terra and sf packages to validate.
+Overall, data cleaning reduced records from `r prettyNum(nrow(m.full), big.mark = ",", scientific = FALSE)` to `r prettyNum(nrow(m), big.mark = ",", scientific = FALSE)`. Observations were plotted using the terra and sf packages to validate (Figure 2).
 
-```{r clean_plot, error=FALSE, out.width="65%", out.height="65%", fig.align='center', warning=FALSE, message=FALSE}
+```{r clean_plot, echo=FALSE, fig.cap="Malleefowl observations 1970-2000.", error=FALSE, out.width="65%", out.height="65%", fig.align='center', warning=FALSE, message=FALSE}
 # Declare geo coords extent, create an SF object for occurrences, and plot
 # observations
 par(mar = c(1, 1, 1, 1))
@@ -102,7 +98,6 @@ au <- rnaturalearth::ne_countries(
   scale = "large",
   returnclass = "sf")
 ggplot2::ggplot() +
-  ggplot2::ggtitle("Malleefowl Observations 1970-2000") +
   ggplot2::geom_sf(data = au, fill = "ivory") +
   ggplot2::geom_sf(data = sf::st_geometry(m.sf), col = "blue", pch = 2) +
   ggplot2::theme(
@@ -113,11 +108,11 @@ ggplot2::ggplot() +
   ggplot2::coord_sf(xlim = ext[1:2], ylim = ext[3:4])
 ```
 
-To estimate species distribution, historical (1970-2000) and future climate data were pulled from WorldClim 2.1 using the geodata package.  Future climate data were pulled for two sequential time periods (2021-2040, 2041-2060) using the Hadley GEM3 model and Shared Socioeconomic Pathway 2-4.5.
+To estimate malleefowl distribution, historical (1970-2000) and future climate data were pulled from WorldClim 2.1 using the geodata package. Future climate data were pulled for two sequential time periods (2021-2040, 2041-2060) using the Hadley GEM3 model and Shared Socioeconomic Pathway 2-4.5.
 
 These future time periods were selected in order to evaluate the time scale of any malleefowl distribution changes. SSP 2-4.5 was selected because it represents a "middle ground" scenario and so should provide a conservative estimate of malleefowl distribution changes.
 
-The WorldClim data provided 19 climate measurements, many of which were similar or lacked a plausible biological mechanism to impact malleefowl distribution.  The following variables were selected as potential model coefficients based on their being distinct and biologically relevant.
+The WorldClim data provided 19 climate measurements, many of which were similar or lacked a plausible biological mechanism to impact malleefowl distribution. The following climatic variables were selected as potential model coefficients based on their being distinct and biologically relevant (Table 1).
 
 ```{r clime_var, echo=FALSE, error=FALSE, warning=FALSE, message=FALSE}
 # Derive climate variable definition table
@@ -127,16 +122,19 @@ c.var <- as.data.frame(cbind(c, d))
 names(c.var) <- c("Climate Variable", "Definition")
 kableExtra::kable_styling(
   kableExtra::row_spec(
-    knitr::kable(c.var, align = "c"),
+    knitr::kable(
+      c.var,
+      align = "c",
+      caption = "Climate variable definitions."),
     0,
     bold = TRUE),
   position = "center",
   latex_options = c("hold_position"))
 ```
 
-Because malleefowl are likely to have preferences based on elevation, sandiness of soil, and fertility of soil (Benshemesh, 2007), the geodata package was used to pull elevation data from the Shuttle Radar Topography Mission and soil composition from the SoilGRIDS database. Sand composition was measured as the percentage of > .05mm particles.  Soil fertility was measured using organic carbon density in kg/m^3^.
+Because malleefowl have preferences based on elevation, sandiness of soil, and fertility of soil (Benshemesh, 2007), the geodata package was used to pull elevation data from the Shuttle Radar Topography Mission and soil composition from the SoilGRIDS database. Sand composition was measured as the percentage of > .05mm particles. Soil fertility was measured using organic carbon density (OCD) in kg/m^3^.
 
-Climate and elevation data were pulled at a 2.5 arc-minute resolution.  Soil data were pulled at a 30 arc-second resolution and aggregated to 2.5 arc-minutes.  A 2.5 arc-minute resolution was selected because it is reasonably granular, but encompasses an individual malleefowl's territory. At Australian latitudes, 2.5 arc-minutes is ~ 3.5-4.5km, whereas radio-tracking studies have demonstrated that malleefowl annual range is within a few miles (Benshemesh, 2007).
+Climate and elevation data were pulled at a 2.5 arc-minute resolution. Soil data were pulled at a 30 arc-second resolution and aggregated to 2.5 arc-minutes. A 2.5 arc-minute resolution was selected because it is reasonably granular, but encompasses an individual malleefowl's territory. At Australian latitudes, 2.5 arc-minutes is ~ 2.2-2.8 miles, whereas radio-tracking studies have demonstrated that malleefowl annual range is within a few miles (Benshemesh, 2007).
 
 ```{r gather, error=FALSE, warning=FALSE, message=FALSE}
 # Pull climate, elevation and soil data and crop to Australia geo extent
@@ -228,11 +226,9 @@ bioclim.f1 <- terra::mask(bioclim.f1, au.msk["type"])
 bioclim.f2 <- terra::mask(bioclim.f2, au.msk["type"])
 ```
 
-Since logistic regression requires both presence and absence data, background psuedo-absence points equal to the observation count (n = `r prettyNum(nrow(m), big.mark = ",", scientific = FALSE)`) were generated at random (excluding observation points) using the dismo package.
+Logistic Generalized Linear Model (GLM) regression was chosen as a modelling technique, since it enables modelling the probability of an event. Since logistic regression requires both presence and absence data, background psuedo-absence points equal to the observation count (n = `r prettyNum(nrow(m), big.mark = ",", scientific = FALSE)`) were generated at random (excluding observation points) using the dismo package.
 
-One potential problem with this approach is that malleefowl are rare and not exhaustively surveyed. Therefore, some psuedo-absence points may diverge from true absence (i.e., contain malleefowl). If this is the case, model estimates will be biased.
-
-```{r absence, error=FALSE, out.width="65%", out.height="65%", fig.align='center', warning=FALSE, message=FALSE}
+```{r absence_one, warning=FALSE, message=FALSE}
 # Create random psuedo absence geo coords
 n.pseudo <- nrow(m.sf)
 land <- bioclim.h[["elev"]] > 0
@@ -244,7 +240,11 @@ pseudo.dismo <- sf::st_as_sf(
   data.frame(pseudo.dismo),
   coords = c("x", "y"),
   crs = 3577)
+```
 
+Observation and pseudo-absence points were visually plotted to inspect for errors (Figure 3).
+
+```{r absence_two, fig.cap="Observation and pseudo-absence point geo plot.", error=FALSE, out.width="65%", out.height="65%", fig.align='center', warning=FALSE, message=FALSE}
 # Plot presence and psuedo-absence points to visually inspect for errors
 par(mar = c(1, 1, 1, 1))
 terra::plot(land, col = "grey", legend = FALSE, axes = FALSE)
@@ -259,6 +259,9 @@ legend(
   cex = 1,
   inset = c(.2, .03))
 ```
+
+One potential problem with this approach is that malleefowl are rare and not exhaustively surveyed. Therefore, some psuedo-absence points may diverge from true absence (i.e., contain malleefowl). If this is the case, model estimates will be biased.
+
 To reserve 20% of data for model evaluation, the dismo package was used to add quintiles. Data were combined into a single presence/absence special feature collection for model fitting.
 
 ```{r combine, error=FALSE, warning=FALSE, message=FALSE}
@@ -278,7 +281,7 @@ envt.data <- terra::extract(bioclim.h, pa.data, ID = FALSE)
 pa.data <- cbind(pa.data, envt.data)
 ```
 
-In total, ten coefficients were considered for a logistic GLM. The bestglm package was used to assess the most parsimonious model per Aikake Information Criteria.  AIC balances a trade-off between the likelihood that a model could have produced the observations and the number of coefficients in the model (i.e., it seeks the most explanatory power for the least coefficients).
+In total, ten coefficients were considered for modelling. The bestglm package was used to assess the most parsimonious model per Aikake Information Criteria. AIC balances a trade-off between the likelihood that a model could have produced the observations and the number of coefficients in the model (i.e., it seeks the most explanatory power for the least coefficients).
 
 ```{r aic, error=FALSE, warning=FALSE, message=FALSE}
 # Subset presence/absence data and run bestglm to select best model per AIC
@@ -289,11 +292,15 @@ best.fit <- bestglm(fit, IC = "AIC", family = binomial(link = "logit"))
 best.fit
 colnames(best.fit$Subsets)[12] <- "logLike"
 kableExtra::kable_styling(
-  knitr::kable(best.fit$Subsets, align = "c", digits = 2),
+  knitr::kable(
+    best.fit$Subsets,
+    align = "c",
+    digits = 2,
+    caption = "Logistic GLM AIC evaluation."),
   latex_options = c("scale_down", "hold_position"))
 ```
 
-Model 9, which includes all variables except for Bio3, was selected since it had the lowest AIC score. To validate, model 10 (another model with a low AIC score) was fit and compared to model 9.
+Model 9, which includes all variables except for Bio3, was selected since it had the lowest AIC score (Table 2). To validate, model 10 (another model with a low AIC score) was fit and compared to model 9.
 
 ```{r aic_explain, error=FALSE, warning=FALSE, message=FALSE}
 # Fit models 9 and 10
@@ -309,11 +316,11 @@ m.10 <- glm(
   family = binomial(link = "logit"),
   subset = kfold != 1)
 ```
-Model 10 had a slightly lower residual deviance (`r round(m.10$deviance, digits = 2)` versus `r round(m.9$deviance, digits = 2)`). But, the difference was minor and model 10 included an additional coefficient.  AIC reasonably picked model 9 as the most parsimonious model.
+Model 10 had a slightly lower residual deviance (`r round(m.10$deviance, digits = 2)` versus `r round(m.9$deviance, digits = 2)`). But, the difference was minor and model 10 included an additional coefficient. AIC reasonably picked model 9 as the most parsimonious model.
 
 Model 9 was fit and the results plotted.
 
-```{r fitting, error=FALSE, warning=FALSE, message=FALSE}
+```{r fitting, fig.cap="Logistic GLM results.", error=FALSE, warning=FALSE, message=FALSE}
 # Fit the GLM
 glm.model <- glm(
   pa ~ bio1 + bio5 + bio6 + bio12 + bio13 + bio14 + elev + sand + ocd,
@@ -329,17 +336,17 @@ dismo::response(
   fun = function(x, y, ...) predict(x, y, type = "response", ...))
 ```
 
-The model results showed that all coefficients were statistically significant except for Bio6 (Min Temperature of Coldest Month). Examining response graphs, the direction of relationships mostly made biological sense.
+The model results showed that all coefficients were statistically significant except for Bio6 (Min Temperature of Coldest Month). Examining response graphs (Figure 4), the direction of relationships mostly made biological sense.
 
-As expected, probability of presence increased with Bio13 (Precipitation of Wettest Month), Bio14 (Precipitation of Driest Month), and sand soil composition.  Probability of presence decreased with elevation (malleefowl habitate in low lying areas).
+As expected, probability of presence increased with Bio13 (Precipitation of Wettest Month), Bio14 (Precipitation of Driest Month), and sand soil composition. Probability of presence decreased with elevation (malleefowl habitate in low lying areas).
 
-Other relationships were less intuitive.  Contrary to expectations, probability of presence decreased with Bio12  (Annual Precipitation) and carbon density of soil.  However, this may reflect a preference against damp forests  rather than a preference against these variables within viable malleefowl habitat.
+Other relationships were less intuitive. Contrary to expectations, probability of presence decreased with Bio12 (Annual Precipitation) and carbon density of soil. However, this may reflect a preference against damp forests rather than a preference against these variables within viable malleefowl habitat.
 
-The most unexpected results were around temperature.  Prior research suggested that increased winter temperature reduces breeding success (Stenhouse & Moseby, 2022). But, Bio6 was not statistically significant.  Additionally, probability of presence increased with Bio5 (Max Temperature of Warmest Month) and decreased with Bio1 (Annual Mean Temperature). A positive direction of effect for Bio5 could reflect a preference for arid environments.  But, it's odd that the direction of effect reversed for Bio1.  More analysis is needed to explain this finding.
+The most unexpected results were around temperature. Prior research suggested that increased winter temperature reduces breeding success (Stenhouse & Moseby, 2022). But, Bio6 was not statistically significant. Additionally, probability of presence increased with Bio5 (Max Temperature of Warmest Month) and decreased with Bio1 (Annual Mean Temperature). It's odd that the direction of effect reversed for two similar variables. More analysis is needed to explain this finding.
 
-Next, the model was fit on historical data and an ROC curve was plotted.
+Next, the model was fit on historical data and an ROC curve was plotted (Figure 5).
 
-```{r roc, error=FALSE, out.width="65%", out.height="65%", fig.align='center', warning=FALSE, message=FALSE}
+```{r roc, fig.cap="Logistic GLM ROC plot.", error=FALSE, out.width="65%", out.height="65%", fig.align='center', warning=FALSE, message=FALSE}
 # Create a prediction layer
 glm.pred <- terra::predict(bioclim.h, glm.model, type = "response")
 test.present <- sf::st_coordinates(subset(pa.data, pa == 1 & kfold == 1))
@@ -360,9 +367,9 @@ The area under the ROC curve was `r round(slot(glm.eval, "auc"), digits = 3)`, i
 # Extract threshold that maximizes specifity plus sensitivity
 spec.sense <- plogis(threshold(glm.eval, stat = "spec_sens"))
 ```
-This threshold was `r round(spec.sense, digits = 3)`. Finally, estimated historical and future distributions were plotted.
+This threshold was `r round(spec.sense, digits = 3)`. Finally, estimated historical and future distributions were plotted (Figure 6).
 
-```{r final, error=FALSE, warning=FALSE, message=FALSE}
+```{r final, fig.cap="Malleefowl distribution plots.", error=FALSE, warning=FALSE, message=FALSE}
 # Create maps based on threshold that maximizes specificity plus sensitivity
 glm.map <- glm.pred >= spec.sense
 glm.pred.future1 <- predict(bioclim.f1, glm.model, type = "response")
@@ -458,18 +465,18 @@ colnames(h.f2) <- c("Hist", "F2", "Freq")
 ```
 Specifically, malleefowl habitat will decline to `r scales::percent(round(sum(h.f1[h.f1$F1 == "TRUE", ]$Freq) / sum(h.f1[h.f1$Hist == "TRUE", ]$Freq), digits = 3))` of its historical range by 2021-2040 and to `r scales::percent(round(sum(h.f2[h.f2$F2 == "TRUE", ]$Freq) / sum(h.f2[h.f2$Hist == "TRUE", ]$Freq), digits = 3))` by 2041-2060.
 
-In particular, Western Australia is forecast to be uninhabitable by malleefowl by 2040-2060.  The largest viable habitat is expected to be in western New South Wales.  However, some new viable habitat is expected to develop in coastal Queensland.
+In particular, Western Australia is forecast to be uninhabitable by malleefowl by 2040-2060. The largest viable habitat is expected to be in western New South Wales. However, some new viable habitat is expected to develop in coastal Queensland.
 
 
 ## Statistical Analysis of Megapodiidae Extinction Risk Versus Dispersal Ability
 
 The Hand-Wing Index is a commonly used proxy for avian dispersal ability, which is thought to influence extinction risk (i.e., more mobile species are at less risk of extinction) (Sheard et al., 2020).
 
-However, this relationship may not hold among Megapodiidae species.  While some are strong flyers, many are heavy and poor at flying (Harris, Burks & Leache, 2014). If wing morphology does not proxy well for dispersal ability due to weight, HWI may be a poor predictor of extinction risk.
+However, this relationship may not hold among Megapodiidae species. While some are strong flyers, many are heavy and poor at flying (Harris, Burks & Leache, 2014). If wing morphology does not proxy well for dispersal ability due to weight, HWI may be a poor predictor of extinction risk.
 
-To evaluate, data on Evolutionary Distinct Globally Endangered (EDGE) scores, which are a combined measure of species' evolutionary uniqueness and extinction risk, and HWI were analyzed.  Data for 30 Megapodiidae individuals across 10 species were provided by Imperial College.
+To evaluate, data on Evolutionary Distinct Globally Endangered (EDGE) scores, which are a measure of species' evolutionary uniqueness and extinction risk, and HWI were analyzed. Data for 30 Megapodiidae individuals across 10 species were provided by Imperial College.
 
-First, data were consolidated and average HWI per species was taken.
+First, data were consolidated and average HWI per species was taken (Table 3).
 
 ```{r stats_setup, error=FALSE, warning=FALSE, message=FALSE}
 # Pull in data, filter for Megapodiidae, and arrange by EDGE score
@@ -489,14 +496,18 @@ names(b.agg)[2] <- "Common Name"
 # Output results
 kableExtra::kable_styling(
   kableExtra::row_spec(
-    knitr::kable(b.agg, digits = c(2, 1), align = "c"),
+    knitr::kable(
+      b.agg,
+      digits = c(2, 1),
+      align = "c",
+      caption = "Megapodiidae species EDGE score and average HWI."),
     0,
     bold = TRUE),
   position = "center",
   latex_options = c("hold_position"))
 ```
 
-No relationship between EDGE and HWI was evident.  To evaluate, a linear model of EDGE score on HWI was fit.
+No relationship between EDGE and HWI was evident. To evaluate, a linear model of EDGE score on HWI was fit.
 
 ```{r stats_model, error=FALSE, warning=FALSE, message=FALSE}
 # Fit and summarise linear model
@@ -504,19 +515,19 @@ m.b <- lm(EDGE ~ avg.HWI, data = b.agg)
 summary(m.b)
 ```
 
-As expected, HWI was not a statistically significant predictor of EDGE score.  The p-value of HWI was `r round(summary(m.b)$coefficients[2,4], digits = 3)`, above an alpha of 5%, causing the null hypothesis of no relationship between HWI and EDGE score to fail to be rejected.
+As expected, HWI was not a statistically significant predictor of EDGE score. The p-value of HWI was `r round(summary(m.b)$coefficients[2,4], digits = 3)`, above an alpha of 5%, causing the null hypothesis of no relationship between HWI and EDGE score to fail to be rejected.
 
-Additionally, the model itself was a poor fit for the data. R-squared was `r round(summary(m.b)$r.squared, digits = 3)`, demonstrating that the model explained only a small percentage of variation. This is evident in plotting.
+Additionally, the model itself was a poor fit for the data. R-squared was `r round(summary(m.b)$r.squared, digits = 3)`, demonstrating that the model explained only a small percentage of variation. This is evident in plotting (Figure 7).
 
-```{r stats_plot1, out.width="65%", out.height="65%", fig.align='center', error=FALSE, warning=FALSE, message=FALSE}
+```{r stats_plot1, fig.cap="Scatter plot with linear regression of EDGE score on HWI.", out.width="50%", out.height="50%", fig.align='center', error=FALSE, warning=FALSE, message=FALSE}
 # Create a scatter plot of the data and add the linear regression
 par(mfrow = c(1, 1), mar = c(4, 4, 0, 0))
 plot(b.agg$avg.HWI, b.agg$EDGE, xlab = "avg.HWI", ylab = "EDGE")
 abline(m.b)
 ```
-To validate the applicability of linear regression as a technique to these data, model diagnostics were plotted and assessed.
+To validate the applicability of linear regression as a technique to these data, model diagnostics were plotted and assessed (Figure 8).
 
-```{r stats_plot2, out.width="75%", out.height="75%", fig.align='center', error=FALSE, warning=FALSE, message=FALSE}
+```{r stats_plot2, fig.cap="Diagnostics of linear regression of EDGE score on HWI.", out.width="50%", out.height="50%", fig.align='center', error=FALSE, warning=FALSE, message=FALSE}
 # Plot diagnostics
 par(mfrow = c(1,2), mar = c(4, 4, 0, 2))
 layout(
@@ -528,18 +539,18 @@ plot(m.b, which = 1:2)
 ```
 This demonstrated two issues.
 
-First, the plot of residuals versus fitted values exhibited heteroskedasticity.  Variance is much higher on the low end of the distribution than on the high end. Second, the Q-Q plot of z-transformed residuals versus theoretical quantiles of the z distribution showed that the residuals are not normally distributed.  If residuals were normally distributed, they would line up along the straight line. Instead, they curve off it at extremes of the distribution.
+First, the plot of residuals versus fitted values exhibited heteroskedasticity. Variance is much higher on the low end of the distribution than on the high end. Second, the Q-Q plot of z-transformed residuals versus theoretical quantiles of the z distribution showed that the residuals are not normally distributed. If residuals were normally distributed, they would line up along the straight line. Instead, they curve off it at extremes of the distribution.
 
-These issues will cause the estimate of model standard error (and therefore p-values and confidence intervals) to be biased.  As a result, the model cannot be used to evaluate the statistical significant of HWI on EDGE score.
+These issues will cause the estimate of model standard error (and therefore p-values and confidence intervals) to be biased. As a result, the model cannot be used to evaluate the statistical significant of HWI on EDGE score.
 
 
 ## Summary
 
-Malleefowl are currently listed as a vulnerable species per the IUCN Red List and Australian law.  Although population size has not been clearly determined, best evidence suggests it has declined significantly from its historic range and is continuing to decline. The Australian government has instituted a recovery plan to increase malleefowl population.
+Malleefowl are currently listed as a vulnerable species per the IUCN Red List and Australian law. Although overall population size has not been fully determined (Benshemes, 2007), best evidence suggests it has declined significantly from its historic range and is continuing to decline. The Australian government has instituted a recovery plan to increase malleefowl population.
 
-This species distribution analysis suggests three potential adjustments to the recover plan.  First, because Western Australia is expected to become nonviable to malleefowl by 2040, conservation efforts there should be abandoned if there are funding shortfalls.  Second, because New South Wales is expected to contain the largest remaining malleefowl habitat by 2060, conservation efforts should be concentrated there.  Third, because some parts of Queensland are expected to become habitable by malleefowl by 2060, the plan should consider re-introduction efforts there in the future.
+This species distribution analysis suggests three potential adjustments to the recover plan. First, because Western Australia is expected to become nonviable to malleefowl by 2040, conservation efforts there should be abandoned if there are funding shortfalls. Second, because New South Wales is expected to contain the largest remaining malleefowl habitat by 2060, conservation efforts should be concentrated there. Third, because some parts of Queensland are expected to become habitable by malleefowl by 2060, the plan should consider re-introduction efforts there in the future.
 
-Finally, this report assessed whether Megapodiidae extinction risk was related to dispersal ability.  No relationship was expected due to many Megapodiidae species being heavy and poor at flying. Of course, a negative cannot be proven.  But, a linear regression failed to demonstrate any statistically significant effect of dispersal ability on Megapodiidae extinction risk.
+Finally, this report assessed whether Megapodiidae extinction risk was related to dispersal ability. No relationship was expected due to many Megapodiidae species being heavy and poor at flying (Harris, Burks & Leache, 2014). Of course, a negative cannot be proven. But, a linear regression failed to demonstrate any statistically significant effect of dispersal ability on Megapodiidae extinction risk.
 
 ## Reference List
 
